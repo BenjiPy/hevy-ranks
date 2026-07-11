@@ -1,0 +1,17 @@
+{
+  "name": "hevy-ranks",
+  "version": "0.1.0",
+  "description": "Systeme de rang gamifie base sur les donnees d'entrainement Hevy (POC: rang des jambes)",
+  "type": "module",
+  "bin": {
+    "hevy-ranks": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "legs": "node src/index.js legs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}
