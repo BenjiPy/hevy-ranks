@@ -4,10 +4,13 @@ All notable changes to Hevy Ranks are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — targeting v0.3.0 (stable)
+## [0.3.0] — 2026-07-12
 
-Delta between the `v0.3.0-pre1` pre-release and the upcoming stable
-`v0.3.0`. Rename this section to `## [0.3.0] — YYYY-MM-DD` at tag time.
+First stable release of the v0.3 line. Promotes `v0.3.0-pre1` to
+stable with two additions: **actionable next-tier recommendations**
+per muscle group and an **API-key mode reliability hint**. Ranking
+engine, coefficients and thresholds are **unchanged from v0.2** —
+existing users' ranks won't move.
 
 ### Added
 
