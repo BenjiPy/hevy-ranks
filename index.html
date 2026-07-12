@@ -200,23 +200,25 @@
           <button class="back" data-back="landing">← Back</button>
           <h1>How ranks are calculated</h1>
           <p>
-            Every muscle group gets one of nine ranks, based on your best
-            performance — not on how much you train. Here is the exact method.
+            Every muscle group gets one of nine ranks, based on your real
+            training — aggregated across your top compound lifts, not on a
+            single lucky set. Here is the exact method.
           </p>
         </div>
 
         <div class="tier-grid" id="tierGrid"></div>
 
         <h2>The method</h2>
-        <p>Each set you log is turned into a comparable strength score.</p>
+        <p>Each set you log is turned into a comparable strength score, then
+        aggregated per muscle group.</p>
         <ol class="steps">
           <li>
             <div>
-              <b>Estimate a 1RM for every set.</b>
+              <b>Estimate a 1RM for every exercise.</b>
               <span
-                >Your best set on each exercise is converted to an estimated
-                one-rep max using the Epley formula (reps are capped at 12 to stay
-                realistic).</span
+                >For each exercise, your best working set across all your
+                sessions is converted to an estimated one-rep max using the
+                Epley formula (reps are capped at 12 to stay realistic).</span
               >
             </div>
           </li>
@@ -235,9 +237,10 @@
             <div>
               <b>Normalize to a reference lift.</b>
               <span
-                >Each exercise has a coefficient relative to the group's reference
-                lift. Machines and cables (where you can load far more) get higher
-                coefficients so they don't inflate your rank.</span
+                >Each exercise has a coefficient relative to its group's
+                reference lift (Squat for Legs, Bench for Chest, etc.). Machines
+                and isolation lifts (calf press, back extension, pec deck…) get
+                higher coefficients so their big loads don't inflate the rank.</span
               >
             </div>
           </li>
@@ -246,8 +249,20 @@
               <b>Divide by bodyweight.</b>
               <span
                 >Strength is measured relative to your bodyweight, pulled from
-                Hevy's measurements (or entered manually). Female standards apply a
-                ~0.72 scaling factor.</span
+                Hevy's measurements (or entered manually). Female standards apply
+                a ~0.72 scaling factor.</span
+              >
+            </div>
+          </li>
+          <li>
+            <div>
+              <b>Aggregate the top 3 compound lifts.</b>
+              <span
+                >Per group, we take your top 3 <em>compound</em> lifts (those
+                with at least 3 sessions logged) and average them with
+                decreasing weights: <code>1.0 / 0.5 / 0.25</code>. This spreads
+                the score across your real training instead of hanging on a
+                single lucky set.</span
               >
             </div>
           </li>
@@ -255,9 +270,10 @@
             <div>
               <b>Match to a rank.</b>
               <span
-                >The resulting ratio is compared to nine thresholds per muscle
-                group. Your rank for a group is your single best exercise — a big
-                lift on day one ranks you up immediately.</span
+                >The composite ratio is compared to nine thresholds per muscle
+                group (see the table below). Click any group on your results
+                dashboard to see exactly which lifts were used and which were
+                excluded.</span
               >
             </div>
           </li>
@@ -266,15 +282,40 @@
         <div class="formula">
           <code>estimated 1RM = weight × (1 + reps / 30)</code>
           <div class="fnote">
-            Epley formula. Then: <code>ratio = 1RM ÷ coefficient ÷ bodyweight</code>,
-            compared to the thresholds below.
+            Epley formula, then per exercise:
+            <code>ratio = 1RM ÷ coefficient ÷ bodyweight</code>, and per group:
+            <code>composite = (r₁ × 1.0 + r₂ × 0.5 + r₃ × 0.25) ÷ 1.75</code>.
           </div>
         </div>
 
+        <h2>Guardrails against gaming the score</h2>
+        <ul class="notes">
+          <li>
+            <b>Isolation exercises don't drive the rank</b> when a compound
+            exists in the same group. Calf press, back extension /
+            hyperextension, pec deck, shrugs, most curls and triceps
+            extensions are flagged as isolation. If <em>no</em> compound
+            qualifies, the isolation lifts are used as a fallback and the rank
+            is <b>capped at Titan</b>.
+          </li>
+          <li>
+            <b>Minimum 3 sessions.</b> A lift needs at least 3 distinct
+            training days to count. Doing pec deck twice for a friend won't
+            outrank your bench. If <em>no</em> lift in a group reaches 3
+            sessions, we still use what's there so you get feedback, but the
+            rank is <b>capped at Platinum</b>.
+          </li>
+          <li>
+            <b>Cardio and mobility are ignored.</b> Only lifts with a real
+            measurable load contribute to your rank.
+          </li>
+        </ul>
+
         <h2>Thresholds per muscle group</h2>
         <p>
-          Minimum equivalent <em>reference-lift 1RM ÷ bodyweight</em> to reach each
-          rank (male standards; multiply by ~0.72 for female).
+          Minimum equivalent <em>reference-lift 1RM ÷ bodyweight</em> to reach
+          each rank (male standards; multiply by ~0.72 for female). These are
+          applied to the composite ratio, not to a single set.
         </p>
         <div class="table-wrap">
           <table class="thresholds" id="thresholdTable"></table>
@@ -287,12 +328,13 @@
             Arms, Core). Per-individual-muscle ranks are planned.
           </li>
           <li>
-            <b>Your data never leaves your device</b> — the API key talks directly
-            to Hevy, and CSV files are parsed locally in your browser.
+            <b>Your data never leaves your device</b> — the API key talks
+            directly to Hevy, and CSV files are parsed locally in your browser.
+            Nothing is sent to any server.
           </li>
           <li>
-            <b>Ranks are estimates.</b> Coefficients and thresholds are tunable and
-            will keep improving. This project is not affiliated with Hevy.
+            <b>Ranks are estimates.</b> Coefficients and thresholds are tunable
+            and will keep improving. This project is not affiliated with Hevy.
           </li>
         </ul>
 

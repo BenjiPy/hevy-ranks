@@ -44,6 +44,12 @@ sets, and the top of the scale is spread out so Mythic actually stays rare.
 - Public API: `unmatchedDetails` map with per-exercise session count and
   reason (`unknown` or `no_load`), for the UI to surface exercises that
   were skipped.
+- Dashboard: expandable per-group panel showing the exact composite,
+  the used lifts, and the excluded ones (with reason).
+- Dashboard: "Exercises not counted" section listing unrecognized
+  strength lifts (cardio silently ignored).
+- Footer: app version + link to this changelog and to the GitHub repo.
+- In-app "How it works" page rewritten to match the new composite logic.
 
 ### Notes
 
