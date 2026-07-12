@@ -708,8 +708,10 @@ function renderLocaleNotice(stats) {
       total > 1 ? "s" : ""
     } matched by keyword</strong> instead of the exact English catalog. ` +
     `This usually means your Hevy app is set to a non-English language. ` +
-    `Results are still accurate, but for the most precise mapping, ` +
-    `switch Hevy to English (Profile → Settings → Language) and re-export your CSV.` +
+    `Results are still accurate, but for the most precise mapping, either ` +
+    `switch Hevy to English (Profile → Settings → Language) and re-export your CSV, ` +
+    `or use <button type="button" class="inline-link" data-goto="setup-api">API-key mode</button> ` +
+    `(Hevy Pro) which relies on stable exercise IDs and is unaffected by app language.` +
     `</div>`;
 }
 

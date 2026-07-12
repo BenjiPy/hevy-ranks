@@ -4,6 +4,20 @@ All notable changes to Hevy Ranks are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — targeting v0.3.0 (stable)
+
+Delta between the `v0.3.0-pre1` pre-release and the upcoming stable
+`v0.3.0`. Rename this section to `## [0.3.0] — YYYY-MM-DD` at tag time.
+
+### Added
+
+- **Mode reliability hint.** Secondary tip on the CSV import panel
+  and extended locale notice on the results page both nudge users
+  toward **API-key mode** as the precision-perfect option — it
+  uses Hevy's stable exercise IDs so there's no title-matching
+  ambiguity regardless of the Hevy app's language. Both mentions
+  carry an inline link that jumps straight to the API-key setup.
+
 ## [0.3.0-pre1] — 2026-07-12
 
 Pre-release. Big UX pass across the whole app and a critical iOS
