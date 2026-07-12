@@ -19,6 +19,7 @@
   </head>
   <body>
     <div class="bg-glow"></div>
+    <canvas id="confetti" class="confetti-canvas" aria-hidden="true"></canvas>
 
     <header class="site-header">
       <button class="brand" data-goto="landing">
@@ -133,12 +134,26 @@
           the <code>workouts.csv</code> file here. Everything is processed locally —
           nothing is sent to any server.
         </p>
+        <p class="panel-note">
+          <strong>Tip for non-English users:</strong> Hevy's exercise catalog is
+          in English only. If your Hevy app is set to another language
+          (e.g. French, Spanish), the export uses translated names and some
+          exercises may fall back to a keyword-based match. For the most
+          accurate results, switch Hevy to <strong>English</strong> before
+          exporting (Profile → Settings → Language), then export the CSV.
+        </p>
 
-        <label class="dropzone" id="dropzone">
-          <input type="file" id="csvFile" accept=".csv" hidden />
-          <span class="dz-icon">⬆</span>
+        <div class="dropzone" id="dropzone">
+          <span class="dz-icon" aria-hidden="true">⬆</span>
           <span class="dz-text" id="dzText">Choose a CSV file or drag &amp; drop</span>
-        </label>
+          <input
+            type="file"
+            id="csvFile"
+            class="dz-input"
+            accept=".csv,text/csv,text/plain,application/vnd.ms-excel"
+            aria-label="Choose a CSV file"
+          />
+        </div>
 
         <div class="field-row">
           <label class="field">
@@ -161,8 +176,10 @@
     <!-- ======================= LOADING ======================= -->
     <section id="loading" class="view hidden">
       <div class="loader">
-        <div class="spinner"></div>
-        <p id="loadingText">Loading…</p>
+        <div class="rank-parade" id="rankParade" aria-hidden="true"></div>
+        <p id="loadingText" class="loading-text">Loading…</p>
+        <div class="loading-bar" aria-hidden="true"><span></span></div>
+        <p class="loading-hint">Crunching your lifts — this can take a few seconds.</p>
       </div>
     </section>
 
@@ -172,6 +189,8 @@
         <button class="back" data-goto="landing">← New calculation</button>
         <div class="results-meta" id="resultsMeta"></div>
       </div>
+
+      <div id="localeNotice" class="locale-notice hidden"></div>
 
       <div class="overview">
         <div class="radar-wrap" id="radarWrap"></div>

@@ -133,6 +133,16 @@ Open `http://localhost:8765`, then pick a mode:
 > ⚠️ **CORS**: depending on the Hevy API configuration, the browser may block direct API
 > calls in key mode. **CSV mode always works** and is recommended for public deployments.
 
+> 💡 **Non-English users — read this before exporting a CSV.**
+> Hevy's exercise catalog is **English-only** at the source. If your Hevy app is set
+> to French, Spanish, German, Portuguese, etc., the CSV export uses translated
+> exercise names (e.g. `Squat (Barre)` instead of `Squat (Barbell)`,
+> `Développé Couché` instead of `Bench Press (Barbell)`).
+> Hevy Ranks handles this with a bilingual keyword fallback (~95% coverage), and
+> the results page will flag when many exercises were matched this way. For a
+> strictly perfect mapping, switch Hevy to **English** (Profile → Settings →
+> Language) before exporting, then re-export the CSV. API-key mode is not affected.
+
 ### CLI
 
 For a quick terminal check (API-key mode):
@@ -185,6 +195,10 @@ scripts/
 - **Cardio and mobility** movements don't count toward strength rank.
 - If a group has **no compound lift with ≥ 3 sessions**, its rank falls back to your isolation lifts and is **capped at Titan**.
 - Per-**individual-muscle** ranking (instead of per group) is planned.
+- **Hevy catalog is English-only.** CSVs exported with the Hevy app in another
+  language work through a keyword fallback (~95% coverage). For strictly perfect
+  matches, export from an English-configured Hevy app — see the tip in
+  [Getting started](#web-app-recommended).
 
 ## Roadmap / TODO
 
@@ -200,6 +214,12 @@ release. Suggestions welcome — open an issue.
       at Titan, minimum 3 sessions per exercise, top-tier thresholds spread
       out, per-group accordion detail, "Exercises not counted" section,
       versioned footer + changelog.
+- [x] **v0.3** — Results-reveal confetti, animated rank-parade loader,
+      styled rank tooltip with per-rank colored glow, iOS-safe CSV picker
+      (overlay input + UTF-8 read + widened MIME accept), CSV validation
+      (extension / MIME / size / empty), FR+EN title fallback with locale
+      notice for non-English Hevy exports, engine `hasData` hardening,
+      fully English codebase.
 
 ### Planned (next up)
 

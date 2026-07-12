@@ -4,6 +4,103 @@ All notable changes to Hevy Ranks are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0-pre1] — 2026-07-12
+
+Pre-release. Big UX pass across the whole app and a critical iOS
+Safari fix. Ranking engine, coefficients and thresholds are
+**unchanged** from v0.2 — your ranks won't move.
+
+### Added
+
+- **Results confetti:** the dashboard now lands with a canvas-based
+  confetti burst colored from your top rank's palette (~200 particles,
+  gravity + drag, HiDPI-aware). Fires only on fresh calculations —
+  not on F5, not on the "Back to your results" shortcut. Intentionally
+  runs regardless of `prefers-reduced-motion` — it's a single-shot ~4s
+  non-strobing decorative reveal, not the recurring/parallax kind of
+  motion the preference is designed to guard against.
+- **Non-English CSV support:** exercises whose title isn't in the
+  English-only Hevy catalog (typical for French / Spanish / etc.
+  exports) are now routed via a FR+EN keyword fallback covering ~95%
+  of the standard exercise list. The results page shows a discreet
+  notice when many exercises were matched this way, and the CSV
+  import panel has an upfront tip telling users to switch Hevy to
+  English for a strictly perfect mapping.
+- **Match statistics:** `computeRanks` now returns
+  `matchStats: { catalog, inferred, total }` so the UI can decide
+  when to surface the locale notice.
+- **Rank parade loader:** the plain spinner is replaced by the 9 rank
+  emblems lighting up in sequence (climb-the-ladder animation), each
+  glowing in its own color, with an indeterminate progress bar and a
+  short hint. Existing step messages still surface on top of it.
+- **Styled rank tooltip:** hovering an emblem on the landing rank
+  strip now shows a dark tooltip with a colored border matching the
+  rank, plus a colored glow + lift on the emblem itself. Replaces
+  the native browser tooltip.
+- **CSV client-side validation:** picked/dropped files are now
+  checked for extension + MIME + size (max 20 MB) + non-emptiness
+  before hitting the parser. Bad files are rejected with an explicit
+  toast instead of failing deep in the CSV parser.
+- **FileReader error handler:** clear message when the picked file
+  is on iCloud Drive but hasn't been downloaded yet.
+
+### Fixed
+
+- **iOS Safari — CSV picker didn't return the selected file.** The
+  `<label>` + `<input hidden>` structure was broken on iOS in two
+  ways: `hidden` silences the input entirely, and the `clip-rect`
+  fallback hits a known iOS bug where the picker opens, the file is
+  chosen, and the `change` event never fires. Rewritten as a `<div>`
+  dropzone with an overlay `<input type="file">`
+  (`opacity:0`, `inset:0`) — the canonical iOS-safe pattern. Also
+  widened `accept` to `.csv,text/csv,text/plain,application/vnd.ms-excel`
+  so the CSV isn't greyed out in the Files picker (Hevy's export is
+  often served as `text/plain` or `application/octet-stream`).
+- **iOS Safari — French CSV read as mojibake.**
+  `FileReader.readAsText` was silently decoding files coming from
+  the Files/iCloud picker as Windows-1252, turning accented exercise
+  titles into garbage before the parser could see them. Only
+  ASCII-named exercises (typically Core) were being recognized.
+  Now uses `file.text()` (UTF-8 per spec) with a
+  `FileReader.readAsText(file, "UTF-8")` fallback, and strips a
+  leading UTF-8 BOM if present.
+- **French exports produced empty ranks.** Even with UTF-8 fixed,
+  the English-only Hevy catalog couldn't map French titles like
+  `Squat (Barre)`, `Développé Couché`, `Presse à Cuisses`, etc. The
+  new title-based group inference (see Added) covers this. Verified
+  end-to-end against a real FR-locale CSV: all 6 groups populate and
+  the "Exercises not counted" list drops to 0.
+- **Confetti never fired when the OS reported
+  `prefers-reduced-motion: reduce`.** Legitimate for looping /
+  parallax animations, but not for a 4-second decorative reveal —
+  Windows users with "Show animations" turned off (or Chrome
+  headless environments) were seeing nothing. The gate is now
+  removed for the confetti while the looping rank-parade loader
+  keeps honoring the preference.
+- **Engine hardening for `hasData`.** A group with lifts but no
+  computable eqRatio (e.g. missing bodyweight) is now correctly
+  reported as `hasData: false`, so consumers reading `g.tier.name`
+  can't crash on `null`.
+
+### Changed
+
+- **Loader markup/styles:** now uses a shared `#rankParade` element
+  with `.loading-bar` / `.loading-hint` instead of the old
+  `.spinner`. Fully respects `prefers-reduced-motion`.
+- **Dropzone markup:** the `<label>` is now a `<div>` (no more
+  `for=`), and the input is CSS-overlaid on top of the whole zone.
+
+### Removed
+
+- Legacy `.spinner` CSS class (no longer referenced anywhere).
+- `visually-hidden-file` utility class (replaced by the overlay
+  pattern).
+
+### Notes
+
+- Prerelease naming: `-pre1` is a pre-release identifier per SemVer.
+  Bump to `0.3.0` (no suffix) when tagging the stable release.
+
 ## [0.2.2] — 2026-07-12
 
 ### Changed

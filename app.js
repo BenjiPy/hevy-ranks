@@ -103,10 +103,23 @@ function showToast(msg) {
 /* ---------------- Decorative rank strip ---------------- */
 function fillStrip(el) {
   el.innerHTML = RANK_TIERS.map(
-    (t) => `<img src="${RANK_IMG(t)}" alt="${t.name}" title="${t.name}" />`
+    (t) =>
+      `<span class="rs-item" data-tip="${t.name}" style="--tip-color:${t.color}">` +
+      `<img src="${RANK_IMG(t)}" alt="${t.name}" />` +
+      `</span>`
   ).join("");
 }
 fillStrip(document.getElementById("rankStrip"));
+fillParade(document.getElementById("rankParade"));
+
+/* ---------------- Loading rank parade ---------------- */
+function fillParade(el) {
+  if (!el) return;
+  el.innerHTML = RANK_TIERS.map(
+    (t, i) =>
+      `<img src="${RANK_IMG(t)}" alt="" style="--i:${i};--tint:${t.color}" />`
+  ).join("");
+}
 buildRanksPage();
 enhanceSelects();
 restoreResults();
@@ -257,10 +270,52 @@ const csvFile = document.getElementById("csvFile");
 const dzText = document.getElementById("dzText");
 let csvText = null;
 
-dropzone.addEventListener("click", () => csvFile.click());
+/* The file input overlays the whole dropzone (opacity:0). No <label>,
+   no JS click relay, no clip-path — this is the only pattern where
+   iOS Safari reliably fires `change` after the picker returns. */
 csvFile.addEventListener("change", () => {
-  if (csvFile.files[0]) readCsv(csvFile.files[0]);
+  if (csvFile.files[0]) acceptFile(csvFile.files[0]);
 });
+
+/* Hard cap for CSV imports (safety net; a real Hevy export is a few MB max).
+   Anything bigger is almost certainly not a Hevy CSV. */
+const MAX_CSV_BYTES = 20 * 1024 * 1024; // 20 MB
+const CSV_MIME_ALLOW = new Set([
+  "text/csv",
+  "text/plain",
+  "application/csv",
+  "application/vnd.ms-excel",
+  "application/octet-stream", // iOS often reports this for .csv from Files
+  "", // some pickers report no MIME at all
+]);
+
+/* Client-side validation of the picked file. `accept=` on the input is
+   only a UX hint (spec allows the picker to ignore it), so we re-check
+   here before doing anything. Rejects bin/img/pdf/etc. with a clear
+   message instead of failing silently downstream. */
+function acceptFile(file) {
+  const name = (file.name || "").toLowerCase();
+  const looksCsvByName = name.endsWith(".csv") || name.endsWith(".txt");
+  const looksCsvByMime = CSV_MIME_ALLOW.has(file.type || "");
+
+  if (!looksCsvByName && !looksCsvByMime) {
+    csvFile.value = "";
+    return showToast(
+      `"${file.name}" doesn't look like a CSV. Export your Hevy data as CSV first.`
+    );
+  }
+  if (file.size > MAX_CSV_BYTES) {
+    csvFile.value = "";
+    return showToast(
+      `File too big (${(file.size / 1024 / 1024).toFixed(1)} MB). Hevy exports are usually under 20 MB.`
+    );
+  }
+  if (file.size === 0) {
+    csvFile.value = "";
+    return showToast("That file is empty.");
+  }
+  readCsv(file);
+}
 ["dragover", "dragenter"].forEach((ev) =>
   dropzone.addEventListener(ev, (e) => {
     e.preventDefault();
@@ -275,17 +330,43 @@ csvFile.addEventListener("change", () => {
 );
 dropzone.addEventListener("drop", (e) => {
   const f = e.dataTransfer.files[0];
-  if (f) readCsv(f);
+  if (f) acceptFile(f);
 });
 
 function readCsv(file) {
-  const reader = new FileReader();
-  reader.onload = () => {
-    csvText = reader.result;
+  const onOk = (text) => {
+    csvText = stripBom(text);
     dzText.textContent = `✓ ${file.name}`;
     dropzone.classList.add("loaded");
   };
-  reader.readAsText(file);
+  const onErr = () => {
+    csvText = null;
+    dropzone.classList.remove("loaded");
+    showToast(
+      "Couldn't read that file. On iOS, make sure it's downloaded from iCloud first."
+    );
+  };
+
+  /* Prefer file.text() (spec-mandated UTF-8). iOS Safari's
+     FileReader.readAsText can silently fall back to Windows-1252 for
+     files coming from the Files/iCloud picker, which turns every
+     accented exercise title (e.g. "Développé couché") into mojibake
+     and breaks keyword matching in `engine.js`. */
+  if (typeof file.text === "function") {
+    file.text().then(onOk).catch(onErr);
+  } else {
+    const reader = new FileReader();
+    reader.onload = () => onOk(String(reader.result || ""));
+    reader.onerror = onErr;
+    reader.readAsText(file, "UTF-8");
+  }
+}
+
+/* Strip a UTF-8 BOM (\uFEFF) if the file was saved with one — otherwise
+   the first header name becomes "\uFEFFtitle" and the column lookup
+   silently fails. */
+function stripBom(s) {
+  return s && s.charCodeAt(0) === 0xfeff ? s.slice(1) : s;
 }
 
 document.getElementById("runCsv").addEventListener("click", async () => {
@@ -580,6 +661,8 @@ function render(result, meta) {
     result.bodyweightKg
   )} kg</strong>`;
 
+  renderLocaleNotice(result.matchStats);
+
   const capped = groups.filter((g) => g.capped).length;
   const cappedNote = capped
     ? ` ${capped} group(s) are capped at Titan (no compound lift with 3+ sessions found).`
@@ -590,6 +673,157 @@ function render(result, meta) {
 
   persistResults();
   show("results");
+
+  const topColor =
+    withData.length
+      ? withData.reduce((a, b) => (b.tierIndex > a.tierIndex ? b : a)).tier.color
+      : null;
+  fireConfetti(topColor);
+}
+
+/* ---------------- Locale mismatch notice ---------------- */
+/* Warn the user when a significant share of their exercises came in via
+   the FR/EN keyword fallback rather than the exact English catalog —
+   almost always because Hevy was set to a non-English language when
+   the CSV was exported. Results are still accurate, but exporting from
+   an English-configured Hevy gives strictly perfect matches. */
+function renderLocaleNotice(stats) {
+  const el = document.getElementById("localeNotice");
+  if (!el) return;
+  const s = stats || {};
+  const total = s.total || 0;
+  const inferred = s.inferred || 0;
+  const ratio = total > 0 ? inferred / total : 0;
+
+  if (inferred < 3 && ratio < 0.15) {
+    el.classList.add("hidden");
+    el.innerHTML = "";
+    return;
+  }
+  el.classList.remove("hidden");
+  el.innerHTML =
+    `<span class="ln-icon" aria-hidden="true">ⓘ</span>` +
+    `<div class="ln-body">` +
+    `<strong>${inferred} of ${total} exercise${
+      total > 1 ? "s" : ""
+    } matched by keyword</strong> instead of the exact English catalog. ` +
+    `This usually means your Hevy app is set to a non-English language. ` +
+    `Results are still accurate, but for the most precise mapping, ` +
+    `switch Hevy to English (Profile → Settings → Language) and re-export your CSV.` +
+    `</div>`;
+}
+
+/* ---------------- Confetti burst (results reveal) ---------------- */
+/* Small canvas particle system, zero dependency. Fires once per render()
+   call (never on restore-from-storage).
+   Note: we deliberately do NOT gate this on `prefers-reduced-motion`.
+   The burst is a single-shot ~4s decorative reveal — non-strobing,
+   non-parallax, non-blocking — so it doesn't trigger the vestibular
+   concerns that motion-reduction preferences target. The rank-parade
+   loader, which loops, still respects the preference (see styles.css). */
+function fireConfetti(accent) {
+  const canvas = document.getElementById("confetti");
+  if (!canvas) return;
+
+  /* Show the canvas FIRST — some browsers report 0×0 dimensions on a
+     display:none canvas, which would make particles invisible. Defer
+     one frame so the browser has painted the layout change before we
+     sample innerWidth/innerHeight. */
+  canvas.classList.add("on");
+  requestAnimationFrame(() => runConfetti(canvas, accent));
+}
+
+function runConfetti(canvas, accent) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const resize = () => {
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    canvas.style.width = window.innerWidth + "px";
+    canvas.style.height = window.innerHeight + "px";
+  };
+  resize();
+  window.addEventListener("resize", resize, { once: true });
+
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width;
+  const H = canvas.height;
+
+  const palette = [
+    accent || "#6c8cff",
+    ...RANK_TIERS.map((t) => t.color),
+  ];
+
+  const count = Math.min(
+    220,
+    Math.max(120, Math.round((window.innerWidth * window.innerHeight) / 9000))
+  );
+  const particles = [];
+  const gravity = 0.35 * dpr;
+  const drag = 0.992;
+
+  const rand = (a, b) => a + Math.random() * (b - a);
+
+  const spawn = (originX) => {
+    for (let i = 0; i < count / 2; i++) {
+      const angle = rand(-Math.PI, 0) + rand(-0.3, 0.3);
+      const speed = rand(9, 18) * dpr;
+      particles.push({
+        x: originX,
+        y: H * 0.72,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - rand(2, 6) * dpr,
+        w: rand(6, 12) * dpr,
+        h: rand(8, 16) * dpr,
+        color: palette[Math.floor(Math.random() * palette.length)],
+        rot: rand(0, Math.PI * 2),
+        vr: rand(-0.25, 0.25),
+        life: rand(90, 160),
+        shape: Math.random() < 0.5 ? "rect" : "circle",
+      });
+    }
+  };
+  spawn(W * 0.2);
+  spawn(W * 0.8);
+
+  let frames = 0;
+  const maxFrames = 260;
+  let raf;
+
+  const step = () => {
+    frames++;
+    ctx.clearRect(0, 0, W, H);
+    for (const p of particles) {
+      p.vx *= drag;
+      p.vy = p.vy * drag + gravity;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.rot += p.vr;
+      p.life--;
+
+      const alpha = Math.max(0, Math.min(1, p.life / 60));
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.color;
+      if (p.shape === "rect") {
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      } else {
+        ctx.beginPath();
+        ctx.arc(0, 0, p.w / 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+    if (frames < maxFrames && particles.some((p) => p.life > 0 && p.y < H + 40)) {
+      raf = requestAnimationFrame(step);
+    } else {
+      cancelAnimationFrame(raf);
+      ctx.clearRect(0, 0, W, H);
+      canvas.classList.remove("on");
+    }
+  };
+  raf = requestAnimationFrame(step);
 }
 
 /* ---------------- Persist results (survive navigation & reload) ---------------- */
