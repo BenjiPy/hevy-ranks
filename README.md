@@ -200,51 +200,15 @@ scripts/
   matches, export from an English-configured Hevy app — see the tip in
   [Getting started](#web-app-recommended).
 
-## Roadmap / TODO
+## Roadmap
 
 The project is actively evolving based on community feedback (r/Hevy).
-Ticked items are already available, unticked ones are planned for a future
-release. Suggestions welcome — open an issue.
 
-### Done
+- **What's already shipped** → see [CHANGELOG.md](CHANGELOG.md).
+- **What's planned or under consideration** → see the
+  [GitHub Issues](https://github.com/BenjiPy/hevy-ranks/issues).
 
-- [x] **v0.1** — First public release: Bronze → Mythic per muscle group,
-      single best lift, CSV + API modes.
-- [x] **v0.2** — Composite of top 3 compound lifts, isolation guard capped
-      at Titan, minimum 3 sessions per exercise, top-tier thresholds spread
-      out, per-group accordion detail, "Exercises not counted" section,
-      versioned footer + changelog.
-- [x] **v0.3** — Results-reveal confetti, animated rank-parade loader,
-      styled rank tooltip with per-rank colored glow, iOS-safe CSV picker
-      (overlay input + UTF-8 read + widened MIME accept), CSV validation
-      (extension / MIME / size / empty), FR+EN title fallback with locale
-      notice for non-English Hevy exports, engine `hasData` hardening,
-      fully English codebase.
-
-### Planned (next up)
-
-- [ ] **Sub-tiers inside each rank** (Gold I / II / III) for finer
-      progression tracking.
-- [ ] **Actionable recommendations** on the dashboard — "do X on squat to
-      reach the next tier for Legs".
-- [ ] **Interactive rank legend** (hover on emblems) so users don't have
-      to leave the dashboard to understand what a rank means.
-- [ ] **Data-privacy section visible on the dashboard** (not just in the
-      README) — everything runs locally, nothing is sent anywhere.
-
-### Ideas / longer-term
-
-- [ ] **Per-individual-muscle rank** (opt-in), alongside the per-group rank.
-- [ ] **True percentiles against other users** — would require an opt-in
-      backend, currently under thought.
-- [ ] **Bodyweight-reps score** for calisthenics-heavy training.
-- [ ] **Progression graph over time** per muscle group.
-- [ ] **Export / share your ranks** (image card, link, etc.).
-
-### Ongoing
-
-- [ ] Keep tuning coefficients and thresholds as more feedback comes in.
-- [ ] Expand the exercise catalog (custom names, less common variants).
+Suggestions welcome — open an issue.
 
 ## Links
 

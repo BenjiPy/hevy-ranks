@@ -4,6 +4,30 @@ All notable changes to Hevy Ranks are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — targeting v0.3.0 (stable)
+
+Delta between the `v0.3.0-pre1` pre-release and the upcoming stable
+`v0.3.0`. Rename this section to `## [0.3.0] — YYYY-MM-DD` at tag time.
+
+### Added
+
+- **Actionable next-tier recommendations.** Each muscle group now shows
+  exactly what it takes to reach the next rank — a compact
+  "↑ +X kg on [Lift]" chip on the row (visible without opening the
+  accordion), plus a full "🎯 To reach [Next Tier]" panel in the detail
+  view. The panel spells out both the 1RM delta and the equivalent for
+  the user's typical rep range on their top compound lift. Recommendations
+  that would require a > 30% jump display a caveat encouraging balanced
+  progression across other compounds instead of chasing one lift.
+  New engine helpers: `nextTierRecommendation()` and `weightForReps()`
+  (reverse Epley).
+- **Mode reliability hint.** Secondary tip on the CSV import panel
+  and extended locale notice on the results page both nudge users
+  toward **API-key mode** as the precision-perfect option — it
+  uses Hevy's stable exercise IDs so there's no title-matching
+  ambiguity regardless of the Hevy app's language. Both mentions
+  carry an inline link that jumps straight to the API-key setup.
+
 ## [0.3.0-pre1] — 2026-07-12
 
 Pre-release. Big UX pass across the whole app and a critical iOS

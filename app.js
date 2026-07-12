@@ -497,6 +497,64 @@ function liftsTable(lifts, { showReason = false } = {}) {
   </table>`;
 }
 
+/* Small inline chip after the "Next: XYZ" text on the group row.
+   Turns the abstract "+0.15× BW" into a concrete action like
+   "+14 kg on Bench Press" so users see it without opening the accordion. */
+function recommendationChip(g) {
+  const r = g.recommendation;
+  if (!r || !(r.delta1RM > 0)) return "";
+  const delta = Math.max(1, Math.round(r.delta1RM));
+  return (
+    ` <span class="reco-chip" title="Push your top lift by ${delta} kg (est. 1RM) to reach ${r.nextTier.name}">` +
+    `↑ +${delta} kg on ${escapeHtml(shortLift(r.topLift.title))}` +
+    `</span>`
+  );
+}
+
+/* Full "how to reach the next tier" block inside the accordion detail. */
+function recommendationBlock(g) {
+  const r = g.recommendation;
+  if (!r) {
+    if (g.hasData && !g.next) {
+      return `<p class="reco reco--max">
+        <span class="reco-icon" aria-hidden="true">👑</span>
+        You've reached <strong>${g.tier.name}</strong> — the top rank
+        for this group. Keep training to hold it.
+      </p>`;
+    }
+    return "";
+  }
+
+  const delta = Math.max(0.5, r.delta1RM);
+  const cur1 = Math.round(r.topLift.best1RM);
+  const need1 = Math.round(r.required1RM);
+  const curR = Math.round(r.currentForReps.weight);
+  const needR = Math.round(r.targetForReps.weight);
+  const reps = r.targetForReps.reps;
+
+  return `
+    <p class="reco">
+      <span class="reco-icon" aria-hidden="true">🎯</span>
+      <span class="reco-body">
+        To reach <strong>${r.nextTier.name}</strong>, push your
+        <strong>${escapeHtml(r.topLift.title)}</strong> up by about
+        <strong>${fmt(delta)} kg</strong> (estimated 1RM):
+        <span class="reco-nums">
+          currently ~${cur1} kg × 1 (${curR} kg × ${reps})
+          → target ~${need1} kg × 1 (${needR} kg × ${reps}).
+        </span>
+        ${r.tooFar ? `<em class="reco-caveat">That's a sizeable jump — expect a few months of consistent training, and don't neglect your other compounds.</em>` : ""}
+      </span>
+    </p>
+  `;
+}
+
+/* Trim a long exercise title for the compact row chip. */
+function shortLift(title) {
+  const t = String(title || "");
+  return t.length > 22 ? t.slice(0, 20).trim() + "…" : t;
+}
+
 function groupItem(g) {
   const label = LABELS_EN[g.group.key];
   if (!g.hasData) {
@@ -520,6 +578,7 @@ function groupItem(g) {
   const nextTxt = g.next
     ? `Next: ${g.next.tier.name} · +${fmt(g.next.remaining)}× BW`
     : "Max rank reached";
+  const recoChip = recommendationChip(g);
   const cappedBadge = g.capped
     ? ` <span class="reason-tag isolation" title="Not enough data — rank is capped">capped</span>`
     : "";
@@ -543,9 +602,12 @@ function groupItem(g) {
     ${cappedTip ? `<p class="capped-note">${cappedTip}</p>` : ""}
   `;
 
+  const reco = recommendationBlock(g);
+
   const detail = `
     <div class="grow-detail-panel">
       ${composite}
+      ${reco}
       <h4>Used in your rank (${g.used.length})</h4>
       ${liftsTable(g.used)}
       ${g.excluded.length
@@ -560,7 +622,7 @@ function groupItem(g) {
       <div class="grow-main">
         <div class="grow-head">
           <span class="grow-name">${label}${cappedBadge}</span>
-          <span class="grow-next">${nextTxt}</span>
+          <span class="grow-next">${nextTxt}${recoChip}</span>
         </div>
         <div class="gtrack">${trackBars(g.tierIndex)}</div>
       </div>
@@ -708,8 +770,10 @@ function renderLocaleNotice(stats) {
       total > 1 ? "s" : ""
     } matched by keyword</strong> instead of the exact English catalog. ` +
     `This usually means your Hevy app is set to a non-English language. ` +
-    `Results are still accurate, but for the most precise mapping, ` +
-    `switch Hevy to English (Profile → Settings → Language) and re-export your CSV.` +
+    `Results are still accurate, but for the most precise mapping, either ` +
+    `switch Hevy to English (Profile → Settings → Language) and re-export your CSV, ` +
+    `or use <button type="button" class="inline-link" data-goto="setup-api">API-key mode</button> ` +
+    `(Hevy Pro) which relies on stable exercise IDs and is unaffected by app language.` +
     `</div>`;
 }
 
