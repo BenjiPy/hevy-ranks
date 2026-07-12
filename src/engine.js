@@ -572,7 +572,7 @@ export function computeRanks(
       eqRatio,
       source,
       capped,
-      hasData: used.length > 0,
+      hasData: used.length > 0 && eqRatio != null,
       tierIndex,
       tier: tierIndex != null ? RANK_TIERS[tierIndex] : null,
       next,
