@@ -23,7 +23,10 @@ sets, and the top of the scale is spread out so Mythic actually stays rare.
   Titan.
 - **Minimum 3 sessions per exercise.** An exercise must have been trained on
   at least 3 distinct days to contribute to your rank. Fixes the classic
-  "I did pec deck twice for a friend and it beat my bench" case.
+  "I did pec deck twice for a friend and it beat my bench" case. If **no**
+  exercise in a group reaches 3 sessions, the group falls back to whatever
+  data exists but its rank is capped at Platinum (so the group is never
+  shown as "no data" when there's actually something to score).
 - **Rebalanced coefficients.** Machine and isolation lifts had coefficients
   too low, which inflated their normalized scores. Updated notably:
   calf press 1.3 → 2.8, back extension (new entry) 2.0, pec deck 0.5 → 0.8,
@@ -41,6 +44,12 @@ sets, and the top of the scale is spread out so Mythic actually stays rare.
 - Public API: `unmatchedDetails` map with per-exercise session count and
   reason (`unknown` or `no_load`), for the UI to surface exercises that
   were skipped.
+- Dashboard: expandable per-group panel showing the exact composite,
+  the used lifts, and the excluded ones (with reason).
+- Dashboard: "Exercises not counted" section listing unrecognized
+  strength lifts (cardio silently ignored).
+- Footer: app version + link to this changelog and to the GitHub repo.
+- In-app "How it works" page rewritten to match the new composite logic.
 
 ### Notes
 

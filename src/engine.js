@@ -22,6 +22,8 @@ const COMPOSITE_WEIGHTS = [1.0, 0.5, 0.25];
 
 /** Tier max atteignable via des isolations seulement (index dans RANK_TIERS). */
 const ISOLATION_TIER_CAP = 5; // Titan
+/** Tier max quand aucun exo n'atteint MIN_SESSIONS (donnee tres partielle). */
+const FEW_SESSIONS_TIER_CAP = 3; // Platinum
 
 /** Les 9 rangs, du plus bas au plus haut, avec leur embleme et couleur. */
 export const RANK_TIERS = [
@@ -505,35 +507,44 @@ export function computeRanks(
     const compounds = allLifts.filter((l) => !l.isolation && enoughSessions(l));
     const isolations = allLifts.filter((l) => l.isolation && enoughSessions(l));
 
-    const excluded = allLifts
-      .filter((l) => !enoughSessions(l) || (l.isolation && compounds.length > 0))
-      .map((l) => ({
-        ...l,
-        reason: !enoughSessions(l) ? "few_sessions" : "isolation",
-      }));
-
     let used = [];
     let source = null;
-    let capped = false;
+    let cap = null;
 
     if (compounds.length > 0) {
       used = compounds.slice(0, COMPOSITE_WEIGHTS.length);
       source = "compound";
     } else if (isolations.length > 0) {
-      // Aucun compound qualifie : on retombe sur les isolations (rang plafonne).
+      // Aucun compound qualifie : on retombe sur les isolations (cap Titan).
       used = isolations.slice(0, COMPOSITE_WEIGHTS.length);
       source = "isolation";
-      capped = true;
+      cap = ISOLATION_TIER_CAP;
+    } else if (allLifts.length > 0) {
+      // Aucun exo n'atteint MIN_SESSIONS : on prend ce qu'on a (cap Platinum),
+      // pour ne pas laisser le groupe vide alors qu'il y a des donnees.
+      used = allLifts.slice(0, COMPOSITE_WEIGHTS.length);
+      source = "few_sessions";
+      cap = FEW_SESSIONS_TIER_CAP;
     }
 
     const eqRatio = used.length ? compositeRatio(used) : null;
+    const capped = cap != null;
+
+    // Tout ce qui n'a pas ete retenu : on l'expose avec une raison.
+    const usedTitles = new Set(used.map((l) => l.title));
+    const excluded = allLifts
+      .filter((l) => !usedTitles.has(l.title))
+      .map((l) => ({
+        ...l,
+        reason: !enoughSessions(l) ? "few_sessions" : "isolation",
+      }));
 
     let tierIndex = null;
     let progress = 0;
     let next = null;
     if (eqRatio != null) {
       tierIndex = ratioToTierIndex(eqRatio, cfg.thresholds, factor);
-      if (capped && tierIndex > ISOLATION_TIER_CAP) tierIndex = ISOLATION_TIER_CAP;
+      if (cap != null && tierIndex > cap) tierIndex = cap;
       const cur = cfg.thresholds[tierIndex] * factor;
       const nextThresh =
         tierIndex < cfg.thresholds.length - 1

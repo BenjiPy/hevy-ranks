@@ -440,17 +440,26 @@ function groupItem(g) {
     ? `Next: ${g.next.tier.name} · +${fmt(g.next.remaining)}× BW`
     : "Max rank reached";
   const cappedBadge = g.capped
-    ? ` <span class="reason-tag isolation" title="Compound lifts missing — rank capped at Titan">capped</span>`
+    ? ` <span class="reason-tag isolation" title="Not enough data — rank is capped">capped</span>`
     : "";
+
+  const sourceExplanation = {
+    compound: `Composite of your <strong>top ${g.used.length} compound lift(s)</strong> for this group (weights: 1.0 / 0.5 / 0.25).`,
+    isolation: `<em>No compound lift with 3+ sessions found — using isolation lifts as a fallback. Rank is capped at Titan.</em>`,
+    few_sessions: `<em>No exercise reached 3 sessions yet — using what's available. Rank is capped at Platinum until you log more sessions.</em>`,
+  }[g.source] ?? "";
+
+  const cappedTip = {
+    isolation: `Log a few sessions of a compound lift (squat, bench, row, OHP, etc.) to unlock the top tiers for this group.`,
+    few_sessions: `Keep training — an exercise needs at least 3 sessions to fully count toward your rank.`,
+  }[g.source];
 
   const composite = `
     <p class="composite-info">
-      ${g.source === "compound"
-        ? `Composite of your <strong>top ${g.used.length} compound lift(s)</strong> for this group (weights: 1.0 / 0.5 / 0.25).`
-        : `<em>No compound lift with 3+ sessions found — using isolation lifts. Rank is capped at Titan.</em>`}
+      ${sourceExplanation}
       Overall ratio: <strong>${fmt(g.eqRatio)}× bodyweight</strong>.
     </p>
-    ${g.capped ? `<p class="capped-note">Log a few sessions of a compound lift (squat, bench, row, OHP, etc.) to unlock the top tiers for this group.</p>` : ""}
+    ${cappedTip ? `<p class="capped-note">${cappedTip}</p>` : ""}
   `;
 
   const detail = `

@@ -84,7 +84,7 @@ async function main() {
     console.log(`  ${name} : ${tierName} ${bar(g.progress)}  ${composite} | ${topExo}`);
   }
   console.log("=====================================================");
-  console.log("  * = rang plafonne (aucun compound qualifie, isolations seules)");
+  console.log("  * = rang plafonne (isolations seules -> Titan, ou < 3 seances -> Platinum)");
   console.log(`  Composite : moyenne ponderee des top 3 exos compounds (>= ${result.minSessions} seances).\n`);
 }
 
