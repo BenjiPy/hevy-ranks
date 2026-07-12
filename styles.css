@@ -739,6 +739,199 @@ input[type="number"]::-webkit-inner-spin-button {
   margin-top: 2px;
 }
 
+/* Cliquable header (accordion trigger) */
+.grow-row {
+  display: grid;
+  grid-template-columns: 54px 1fr auto 22px;
+  gap: 18px;
+  align-items: center;
+  padding: 18px clamp(16px, 2.4vw, 26px);
+  transition: background 0.15s ease;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  width: 100%;
+  text-align: left;
+}
+.grow-row:hover {
+  background: var(--surface-2);
+}
+.grow-row[aria-expanded="true"] {
+  background: var(--surface-2);
+}
+.grow-row .chevron {
+  color: var(--muted-2);
+  transition: transform 0.2s ease;
+}
+.grow-row[aria-expanded="true"] .chevron {
+  transform: rotate(180deg);
+  color: var(--muted);
+}
+.grow-item {
+  border-top: 1px solid var(--line-soft);
+}
+.grow-item:first-child {
+  border-top: none;
+}
+.grow-item.empty .grow-row {
+  cursor: default;
+  opacity: 0.55;
+}
+.grow-item.empty .grow-row:hover {
+  background: transparent;
+}
+.grow-item.empty .chevron {
+  visibility: hidden;
+}
+
+.grow-detail-panel {
+  padding: 4px clamp(16px, 2.4vw, 26px) 22px;
+  background: var(--surface-2);
+  border-top: 1px solid var(--line-soft);
+  display: none;
+}
+.grow-item.open .grow-detail-panel {
+  display: block;
+}
+.grow-detail-panel h4 {
+  margin: 14px 0 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--muted-2);
+  font-weight: 700;
+}
+.grow-detail-panel h4:first-child {
+  margin-top: 6px;
+}
+.grow-detail-panel .composite-info {
+  margin: 6px 0 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.grow-detail-panel .composite-info strong {
+  color: var(--text);
+}
+.grow-detail-panel .capped-note {
+  background: rgba(255, 92, 122, 0.08);
+  border: 1px solid rgba(255, 92, 122, 0.35);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 13px;
+  margin: 8px 0 6px;
+}
+
+.lifts-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.lifts-table th,
+.lifts-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--line-soft);
+}
+.lifts-table th {
+  color: var(--muted-2);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.lifts-table td.num,
+.lifts-table th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.lifts-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.lifts-table .lift-title {
+  color: var(--text);
+  font-weight: 500;
+}
+.lifts-table .lift-ratio {
+  color: var(--text);
+  font-weight: 600;
+}
+.reason-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: var(--surface-3);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+.reason-tag.isolation {
+  color: #ffb670;
+  border-color: rgba(255, 182, 112, 0.35);
+  background: rgba(255, 182, 112, 0.08);
+}
+.reason-tag.few_sessions {
+  color: #7ec7ff;
+  border-color: rgba(126, 199, 255, 0.35);
+  background: rgba(126, 199, 255, 0.08);
+}
+.reason-tag.unknown {
+  color: var(--muted);
+}
+.reason-tag.no_load {
+  color: var(--muted);
+}
+
+/* Section "exercises not counted" en bas du dashboard */
+.unmatched-section {
+  margin-top: 10px;
+}
+.unmatched-lead {
+  color: var(--muted);
+  font-size: 13.5px;
+  margin: 0 0 10px;
+}
+.unmatched-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.unmatched-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px clamp(14px, 2vw, 20px);
+  border-top: 1px solid var(--line-soft);
+  font-size: 13.5px;
+}
+.unmatched-list li:first-child {
+  border-top: none;
+}
+.unmatched-list .um-title {
+  color: var(--text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.unmatched-list .um-meta {
+  color: var(--muted);
+  font-size: 12px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
 .disclaimer {
   color: var(--muted-2);
   font-size: 13px;
@@ -956,6 +1149,32 @@ table.thresholds tbody tr:last-child td {
   font-size: 13px;
   text-align: center;
 }
+.site-footer p {
+  margin: 4px 0;
+}
+.site-footer-meta {
+  color: var(--muted-2);
+  font-size: 12.5px;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.site-footer-meta .app-version {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.site-footer-meta .dot {
+  color: var(--muted-2);
+  opacity: 0.6;
+}
+.site-footer-meta a {
+  color: var(--muted);
+}
+.site-footer-meta a:hover {
+  color: var(--text);
+}
 
 @media (max-width: 760px) {
   .overview {
@@ -976,16 +1195,18 @@ table.thresholds tbody tr:last-child td {
   .cta-row .btn {
     width: 100%;
   }
-  .grow {
-    grid-template-columns: 44px 1fr;
+  .grow,
+  .grow-row {
+    grid-template-columns: 44px 1fr 22px;
+    gap: 12px;
   }
   .grow-emblem {
     width: 44px;
     height: 44px;
   }
   .grow-right {
-    grid-column: 2;
+    grid-column: 1 / -1;
     text-align: left;
-    margin-top: 2px;
+    margin-top: 4px;
   }
 }

@@ -110,6 +110,22 @@ fillStrip(document.getElementById("rankStrip"));
 buildRanksPage();
 enhanceSelects();
 restoreResults();
+loadAppVersion();
+
+/* Fetch la version depuis package.json (source unique de verite). */
+function loadAppVersion() {
+  const el = document.getElementById("appVersion");
+  if (!el) return;
+  fetch("package.json", { cache: "no-cache" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((pkg) => {
+      if (pkg?.version) el.textContent = pkg.version;
+      else el.textContent = "?";
+    })
+    .catch(() => {
+      el.textContent = "?";
+    });
+}
 
 /* ---------------- Custom listbox (replaces native <select>) ---------------- */
 function enhanceSelects() {
@@ -354,39 +370,172 @@ function trackBars(idx) {
   }
   return s;
 }
-function groupRow(g) {
+
+const REASON_LABEL = {
+  isolation: "Isolation",
+  few_sessions: "Too few sessions",
+  unknown: "Unrecognized exercise",
+  no_load: "No measurable load",
+};
+const REASON_HELP = {
+  isolation:
+    "Excluded because at least one compound lift is available. Kept for reference.",
+  few_sessions: "Needs at least 3 distinct training days to count.",
+};
+
+function liftsTable(lifts, { showReason = false } = {}) {
+  if (!lifts.length) return `<p class="composite-info">Nothing to show.</p>`;
+  const rows = lifts
+    .map((l) => {
+      const reasonCell = showReason
+        ? `<td><span class="reason-tag ${l.reason}">${REASON_LABEL[l.reason] ?? l.reason}</span></td>`
+        : "";
+      return `<tr>
+        <td class="lift-title">${escapeHtml(l.title)}</td>
+        <td class="num">${fmt(l.load)} kg × ${l.reps}</td>
+        <td class="num">${fmt(l.best1RM)} kg</td>
+        <td class="num">${l.coeff != null ? fmt(l.coeff) : "—"}</td>
+        <td class="num">${l.sessionsCount}</td>
+        <td class="num lift-ratio">${l.eqRatio != null ? fmt(l.eqRatio) + "×" : "—"}</td>
+        ${reasonCell}
+      </tr>`;
+    })
+    .join("");
+  const reasonHead = showReason ? "<th>Reason</th>" : "";
+  return `<table class="lifts-table">
+    <thead><tr>
+      <th>Exercise</th>
+      <th class="num">Best set</th>
+      <th class="num">Est. 1RM</th>
+      <th class="num">Coeff</th>
+      <th class="num">Sessions</th>
+      <th class="num">Ratio</th>
+      ${reasonHead}
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function groupItem(g) {
   const label = LABELS_EN[g.group.key];
   if (!g.hasData) {
-    return `<div class="grow empty">
-      <img class="grow-emblem" src="${RANK_IMG(RANK_TIERS[0])}" alt="" style="filter:grayscale(1)" />
-      <div class="grow-main">
-        <div class="grow-head"><span class="grow-name">${label}</span></div>
-        <div class="gtrack">${trackBars(-1)}</div>
-        <div class="grow-detail">No data loaded yet.</div>
-      </div>
-      <div class="grow-right"><div class="grow-tier" style="color:var(--muted-2)">—</div></div>
+    // Groupe sans donnee exploitable : header non-cliquable
+    const excludedNote = g.excluded.length
+      ? ` · ${g.excluded.length} lift(s) skipped (see below)`
+      : "";
+    return `<div class="grow-item empty">
+      <button class="grow-row" type="button" aria-expanded="false" disabled>
+        <img class="grow-emblem" src="${RANK_IMG(RANK_TIERS[0])}" alt="" style="filter:grayscale(1)" />
+        <div class="grow-main">
+          <div class="grow-head"><span class="grow-name">${label}</span></div>
+          <div class="gtrack">${trackBars(-1)}</div>
+          <div class="grow-detail">No qualifying exercise yet${excludedNote}.</div>
+        </div>
+        <div class="grow-right"><div class="grow-tier" style="color:var(--muted-2)">—</div></div>
+        <span class="chevron">▾</span>
+      </button>
     </div>`;
   }
-  const b = g.best;
   const nextTxt = g.next
     ? `Next: ${g.next.tier.name} · +${fmt(g.next.remaining)}× BW`
     : "Max rank reached";
-  return `<div class="grow">
-    <img class="grow-emblem" src="${RANK_IMG(g.tier)}" alt="${g.tier.name}" />
-    <div class="grow-main">
-      <div class="grow-head">
-        <span class="grow-name">${label}</span>
-        <span class="grow-next">${nextTxt}</span>
+  const cappedBadge = g.capped
+    ? ` <span class="reason-tag isolation" title="Compound lifts missing — rank capped at Titan">capped</span>`
+    : "";
+
+  const composite = `
+    <p class="composite-info">
+      ${g.source === "compound"
+        ? `Composite of your <strong>top ${g.used.length} compound lift(s)</strong> for this group (weights: 1.0 / 0.5 / 0.25).`
+        : `<em>No compound lift with 3+ sessions found — using isolation lifts. Rank is capped at Titan.</em>`}
+      Overall ratio: <strong>${fmt(g.eqRatio)}× bodyweight</strong>.
+    </p>
+    ${g.capped ? `<p class="capped-note">Log a few sessions of a compound lift (squat, bench, row, OHP, etc.) to unlock the top tiers for this group.</p>` : ""}
+  `;
+
+  const detail = `
+    <div class="grow-detail-panel">
+      ${composite}
+      <h4>Used in your rank (${g.used.length})</h4>
+      ${liftsTable(g.used)}
+      ${g.excluded.length
+        ? `<h4>Not used (${g.excluded.length})</h4>${liftsTable(g.excluded, { showReason: true })}`
+        : ""}
+    </div>
+  `;
+
+  return `<div class="grow-item" data-group="${g.group.key}">
+    <button class="grow-row" type="button" aria-expanded="false" data-toggle-group="${g.group.key}">
+      <img class="grow-emblem" src="${RANK_IMG(g.tier)}" alt="${g.tier.name}" />
+      <div class="grow-main">
+        <div class="grow-head">
+          <span class="grow-name">${label}${cappedBadge}</span>
+          <span class="grow-next">${nextTxt}</span>
+        </div>
+        <div class="gtrack">${trackBars(g.tierIndex)}</div>
       </div>
-      <div class="gtrack">${trackBars(g.tierIndex)}</div>
-      <div class="grow-detail"><strong>${b.title}</strong> · ${fmt(b.load)} kg × ${b.reps} · est. 1RM ${fmt(b.best1RM)} kg</div>
-    </div>
-    <div class="grow-right">
-      <div class="grow-tier">${g.tier.name}</div>
-      <div class="grow-ratio">${fmt(b.eqRatio)}× BW</div>
-    </div>
+      <div class="grow-right">
+        <div class="grow-tier">${g.tier.name}</div>
+        <div class="grow-ratio">${fmt(g.eqRatio)}× BW</div>
+      </div>
+      <span class="chevron">▾</span>
+    </button>
+    ${detail}
   </div>`;
 }
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
+  );
+}
+
+/* ---------------- Unmatched section ---------------- */
+function renderUnmatched(details) {
+  const section = document.getElementById("unmatchedSection");
+  const listEl = document.getElementById("unmatchedList");
+  const leadEl = document.getElementById("unmatchedLead");
+  if (!section) return;
+
+  const items = [...(details?.values() ?? [])]
+    .map((d) => ({
+      title: d.title,
+      sessions: d.sessions?.size ?? 0,
+      reason: d.reason,
+    }))
+    .sort((a, b) => b.sessions - a.sessions);
+
+  if (!items.length) {
+    section.classList.add("hidden");
+    listEl.innerHTML = "";
+    return;
+  }
+  section.classList.remove("hidden");
+  leadEl.textContent =
+    "These exercises were skipped because they aren't recognized as strength lifts (custom, cardio, mobility, etc.). Reach out if a lift you care about is here.";
+  listEl.innerHTML = items
+    .map(
+      (i) => `<li>
+        <span class="um-title" title="${escapeHtml(i.title)}">${escapeHtml(i.title)}</span>
+        <span class="um-meta">
+          <span>${i.sessions} session${i.sessions > 1 ? "s" : ""}</span>
+          <span class="reason-tag ${i.reason}">${REASON_LABEL[i.reason] ?? i.reason}</span>
+        </span>
+      </li>`
+    )
+    .join("");
+}
+
+/* ---------------- Accordion click handling (delegated) ---------------- */
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-toggle-group]");
+  if (!btn || btn.disabled) return;
+  const item = btn.closest(".grow-item");
+  if (!item) return;
+  const open = item.classList.toggle("open");
+  btn.setAttribute("aria-expanded", String(open));
+  persistResults();
+});
 
 /* ---------------- Render results ---------------- */
 function render(result, meta) {
@@ -402,16 +551,19 @@ function render(result, meta) {
       <div class="best-label">Your top rank</div>
       <img src="${RANK_IMG(best.tier)}" alt="${best.tier.name}" />
       <div class="best-tier">${best.tier.name}</div>
-      <div class="best-sub">${LABELS_EN[best.group.key]} · ${best.best.title} — est. 1RM ${fmt(
+      <div class="best-sub">${LABELS_EN[best.group.key]} · composite ${fmt(
+      best.eqRatio
+    )}× bodyweight (top: ${escapeHtml(best.best.title)}, est. 1RM ${fmt(
       best.best.best1RM
-    )} kg (${fmt(best.best.eqRatio)}× bodyweight)</div>`;
+    )} kg)</div>`;
   } else {
     bestEl.innerHTML = `<div class="best-label">Result</div>
       <div class="best-tier">No usable data</div>
       <div class="best-sub">No exercise with a measurable load was found.</div>`;
   }
 
-  document.getElementById("groups").innerHTML = groups.map(groupRow).join("");
+  document.getElementById("groups").innerHTML = groups.map(groupItem).join("");
+  renderUnmatched(result.unmatchedDetails);
 
   document.getElementById("resultsMeta").innerHTML = `Source: <strong>${
     meta.source
@@ -419,10 +571,13 @@ function render(result, meta) {
     result.bodyweightKg
   )} kg</strong>`;
 
-  const unmatched = result.unmatched.size;
-  document.getElementById("disclaimer").textContent = unmatched
-    ? `${unmatched} exercise(s) weren't recognized (custom / not loaded) and were skipped. Ranks are tunable estimates.`
-    : "Ranks are estimates based on the Epley 1RM and tunable strength standards.";
+  const capped = groups.filter((g) => g.capped).length;
+  const cappedNote = capped
+    ? ` ${capped} group(s) are capped at Titan (no compound lift with 3+ sessions found).`
+    : "";
+  document.getElementById("disclaimer").textContent =
+    "Ranks come from a composite of your top compound lifts per group (Epley 1RM ÷ coefficient ÷ bodyweight). Isolation lifts and exercises with fewer than 3 sessions are shown in the details but don't drive the rank." +
+    cappedNote;
 
   persistResults();
   show("results");
