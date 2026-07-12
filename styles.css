@@ -496,6 +496,52 @@ input[type="number"]::-webkit-inner-spin-button {
   font-size: 14px;
   margin: 0 0 24px;
 }
+/* Proactive tip on the CSV import panel (non-English users). */
+.panel-note {
+  display: block;
+  margin: 0 0 24px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.panel-note strong {
+  color: var(--text);
+}
+/* Contextual notice shown on the results page when many exercises
+   were routed via the FR/EN keyword fallback. */
+.locale-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  margin: 0 0 22px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(108, 140, 255, 0.06);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.locale-notice.hidden {
+  display: none;
+}
+.locale-notice .ln-icon {
+  color: var(--accent);
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.locale-notice .ln-body {
+  color: var(--muted);
+}
+.locale-notice .ln-body strong {
+  color: var(--text);
+}
 .back {
   background: none;
   border: none;

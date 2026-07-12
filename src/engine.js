@@ -273,16 +273,40 @@ const GROUP_HINTS = [
  * "__skip__" for cardio/mobility (caller should silently ignore), or null
  * when no hint matches. Used as a fallback for CSV-mode exercises whose
  * template isn't in the English-only catalog.
+ *
+ * Hints are matched on WORD boundaries (not raw substring) so that short
+ * keywords like "velo" or "run" don't accidentally match inside longer
+ * words like "developpe" or "running-style-something". Multi-word hints
+ * ("leg press", "presse a cuisses") match as a phrase between boundaries.
  */
 export function inferGroupFromTitle(rawTitle) {
   const norm = deburr(rawTitle || "");
   if (!norm) return null;
   for (const [group, hints] of GROUP_HINTS) {
     for (const h of hints) {
-      if (norm.includes(h)) return group;
+      if (matchesWord(norm, h)) return group;
     }
   }
   return null;
+}
+
+function matchesWord(haystack, needle) {
+  const words = needle.trim().split(/\s+/).map(escapeRegex);
+  if (!words.length) return false;
+  // Each word may carry an optional "s" / "es" (FR/EN plural), and words
+  // are separated by any whitespace in the haystack. Overall we require
+  // a non-alphanumeric boundary before the first and after the last word
+  // (start/end of string is fine too) so short hints like "run" or "velo"
+  // never match inside longer words ("running", "developpe").
+  // Cover EN plural (curl -> curls), FR gender/number (lateral -> laterale,
+  // lateraux, laterales) with a compact suffix alternation.
+  const inner = words.map((w) => `${w}(?:es|s|e|aux)?`).join("\\s+");
+  const re = new RegExp(`(?:^|[^a-z0-9])${inner}(?:$|[^a-z0-9])`);
+  return re.test(haystack);
+}
+
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /** Convert workouts from the Hevy API into the engine's "sessions" format. */
@@ -469,6 +493,12 @@ export function computeRanks(
   const unmatchedTitles = new Set();
   // title -> { sessions:Set<date>, reason:'unknown'|'no_load' }
   const unmatchedDetails = new Map();
+  // Track how each strength exercise was routed (distinct titles), so the
+  // UI can warn the user when many exercises came in via the FR/EN keyword
+  // fallback instead of the exact English catalog — a strong signal that
+  // Hevy was set to a non-English locale when the CSV was exported.
+  const catalogMatched = new Set();
+  const inferredMatched = new Set();
 
   for (const s of sessions) {
     for (const ex of s.exercises ?? []) {
@@ -476,6 +506,7 @@ export function computeRanks(
       if (!tpl && ex.title) tpl = catalog.byTitle.get(catalog.norm(ex.title));
       const primary = tpl?.primary;
       let groupKey = primary ? PRIMARY_TO_GROUP[primary] : null;
+      const cameFromCatalog = groupKey != null;
       const rawTitle = ex.title ?? tpl?.title ?? "";
 
       const type = ex.type ?? tpl?.type ?? "weight_reps";
@@ -559,6 +590,9 @@ export function computeRanks(
         }
         continue;
       }
+
+      if (cameFromCatalog) catalogMatched.add(rawTitle);
+      else if (rawTitle) inferredMatched.add(rawTitle);
 
       const map = perGroup[groupKey];
       const prev = map.get(title);
@@ -686,5 +720,10 @@ export function computeRanks(
     groups,
     unmatched: unmatchedTitles,
     unmatchedDetails,
+    matchStats: {
+      catalog: catalogMatched.size,
+      inferred: inferredMatched.size,
+      total: catalogMatched.size + inferredMatched.size,
+    },
   };
 }

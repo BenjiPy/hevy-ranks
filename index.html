@@ -134,6 +134,14 @@
           the <code>workouts.csv</code> file here. Everything is processed locally —
           nothing is sent to any server.
         </p>
+        <p class="panel-note">
+          <strong>Tip for non-English users:</strong> Hevy's exercise catalog is
+          in English only. If your Hevy app is set to another language
+          (e.g. French, Spanish), the export uses translated names and some
+          exercises may fall back to a keyword-based match. For the most
+          accurate results, switch Hevy to <strong>English</strong> before
+          exporting (Profile → Settings → Language), then export the CSV.
+        </p>
 
         <div class="dropzone" id="dropzone">
           <span class="dz-icon" aria-hidden="true">⬆</span>
@@ -181,6 +189,8 @@
         <button class="back" data-goto="landing">← New calculation</button>
         <div class="results-meta" id="resultsMeta"></div>
       </div>
+
+      <div id="localeNotice" class="locale-notice hidden"></div>
 
       <div class="overview">
         <div class="radar-wrap" id="radarWrap"></div>

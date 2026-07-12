@@ -661,6 +661,8 @@ function render(result, meta) {
     result.bodyweightKg
   )} kg</strong>`;
 
+  renderLocaleNotice(result.matchStats);
+
   const capped = groups.filter((g) => g.capped).length;
   const cappedNote = capped
     ? ` ${capped} group(s) are capped at Titan (no compound lift with 3+ sessions found).`
@@ -677,6 +679,38 @@ function render(result, meta) {
       ? withData.reduce((a, b) => (b.tierIndex > a.tierIndex ? b : a)).tier.color
       : null;
   fireConfetti(topColor);
+}
+
+/* ---------------- Locale mismatch notice ---------------- */
+/* Warn the user when a significant share of their exercises came in via
+   the FR/EN keyword fallback rather than the exact English catalog —
+   almost always because Hevy was set to a non-English language when
+   the CSV was exported. Results are still accurate, but exporting from
+   an English-configured Hevy gives strictly perfect matches. */
+function renderLocaleNotice(stats) {
+  const el = document.getElementById("localeNotice");
+  if (!el) return;
+  const s = stats || {};
+  const total = s.total || 0;
+  const inferred = s.inferred || 0;
+  const ratio = total > 0 ? inferred / total : 0;
+
+  if (inferred < 3 && ratio < 0.15) {
+    el.classList.add("hidden");
+    el.innerHTML = "";
+    return;
+  }
+  el.classList.remove("hidden");
+  el.innerHTML =
+    `<span class="ln-icon" aria-hidden="true">ⓘ</span>` +
+    `<div class="ln-body">` +
+    `<strong>${inferred} of ${total} exercise${
+      total > 1 ? "s" : ""
+    } matched by keyword</strong> instead of the exact English catalog. ` +
+    `This usually means your Hevy app is set to a non-English language. ` +
+    `Results are still accurate, but for the most precise mapping, ` +
+    `switch Hevy to English (Profile → Settings → Language) and re-export your CSV.` +
+    `</div>`;
 }
 
 /* ---------------- Confetti burst (results reveal) ---------------- */
