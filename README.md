@@ -126,10 +126,14 @@ cp .env.example .env      # then fill in HEVY_API_KEY, BODYWEIGHT_KG, SEX
 npm run cli
 ```
 
-### Deploy to GitHub Pages
+### Try it online!
 
-It's a static site: push the repo, then **Settings → Pages → Deploy from branch** (repo
-root). No build step.
+No install needed — the app runs entirely in your browser:
+
+**👉 [benjipy.github.io/hevy-ranks](https://benjipy.github.io/hevy-ranks/)**
+
+Pick **CSV import** (works everywhere) or **API key** mode, and get your ranks in seconds.
+Your data never leaves your machine.
 
 ---
 
