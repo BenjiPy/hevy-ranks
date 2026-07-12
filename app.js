@@ -103,10 +103,23 @@ function showToast(msg) {
 /* ---------------- Decorative rank strip ---------------- */
 function fillStrip(el) {
   el.innerHTML = RANK_TIERS.map(
-    (t) => `<img src="${RANK_IMG(t)}" alt="${t.name}" title="${t.name}" />`
+    (t) =>
+      `<span class="rs-item" data-tip="${t.name}" style="--tip-color:${t.color}">` +
+      `<img src="${RANK_IMG(t)}" alt="${t.name}" />` +
+      `</span>`
   ).join("");
 }
 fillStrip(document.getElementById("rankStrip"));
+fillParade(document.getElementById("rankParade"));
+
+/* ---------------- Loading rank parade ---------------- */
+function fillParade(el) {
+  if (!el) return;
+  el.innerHTML = RANK_TIERS.map(
+    (t, i) =>
+      `<img src="${RANK_IMG(t)}" alt="" style="--i:${i};--tint:${t.color}" />`
+  ).join("");
+}
 buildRanksPage();
 enhanceSelects();
 restoreResults();

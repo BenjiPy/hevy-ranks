@@ -332,15 +332,69 @@ input[type="number"]::-webkit-inner-spin-button {
   flex-wrap: wrap;
   margin: 6px auto 36px;
 }
+.rs-item {
+  position: relative;
+  display: inline-flex;
+  isolation: isolate;
+}
 .rank-strip img {
   width: clamp(44px, 8vw, 72px);
   height: clamp(44px, 8vw, 72px);
   border-radius: 50%;
   filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.6));
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, filter 0.2s ease;
 }
-.rank-strip img:hover {
-  transform: translateY(-6px) scale(1.07);
+.rs-item:hover img {
+  transform: translateY(-6px) scale(1.08);
+  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.75))
+    drop-shadow(0 0 12px var(--tip-color, var(--accent)));
+}
+/* Custom tooltip (replaces the native browser one) */
+.rs-item::before,
+.rs-item::after {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  transform: translate(-50%, 4px);
+  z-index: 5;
+}
+.rs-item::before {
+  content: attr(data-tip);
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #0e1220;
+  border: 1px solid var(--tip-color, var(--line));
+  color: var(--tip-color, var(--text));
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+.rs-item::after {
+  content: "";
+  bottom: calc(100% + 4px);
+  width: 8px;
+  height: 8px;
+  background: #0e1220;
+  border-right: 1px solid var(--tip-color, var(--line));
+  border-bottom: 1px solid var(--tip-color, var(--line));
+  transform: translate(-50%, 4px) rotate(45deg);
+}
+.rs-item:hover::before,
+.rs-item:focus-visible::before {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.rs-item:hover::after,
+.rs-item:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0) rotate(45deg);
 }
 .cta-row {
   display: flex;
@@ -522,21 +576,104 @@ input[type="number"]::-webkit-inner-spin-button {
 .loader {
   display: grid;
   place-items: center;
-  gap: 20px;
-  padding: 120px 0;
+  gap: 22px;
+  padding: 90px 0;
   color: var(--muted);
 }
-.spinner {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  border: 4px solid var(--line);
-  border-top-color: var(--accent);
-  animation: spin 0.9s linear infinite;
+
+/* 9 rank emblems, one glowing at a time (climb-the-ladder animation). */
+.rank-parade {
+  --count: 9;
+  --step: 0.28s; /* delay between two adjacent emblems */
+  --cycle: calc(var(--count) * var(--step) + 0.8s);
+  display: flex;
+  gap: clamp(4px, 1.2vw, 10px);
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 560px;
 }
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
+.rank-parade img {
+  width: clamp(38px, 6.5vw, 56px);
+  height: clamp(38px, 6.5vw, 56px);
+  border-radius: 50%;
+  opacity: 0.28;
+  filter: grayscale(0.7) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+  transform: translateY(0) scale(0.92);
+  animation: parade var(--cycle) ease-in-out infinite;
+  animation-delay: calc(var(--i) * var(--step));
+  will-change: transform, opacity, filter;
+}
+@keyframes parade {
+  0%,
+  60%,
+  100% {
+    opacity: 0.28;
+    transform: translateY(0) scale(0.92);
+    filter: grayscale(0.7) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+  }
+  15%,
+  30% {
+    opacity: 1;
+    transform: translateY(-10px) scale(1.12);
+    filter: grayscale(0) drop-shadow(0 10px 22px rgba(0, 0, 0, 0.7))
+      drop-shadow(0 0 14px var(--tint, var(--accent)));
+  }
+}
+
+.loading-text {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+  min-height: 1.4em;
+  text-align: center;
+}
+.loading-bar {
+  width: min(320px, 70vw);
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+  position: relative;
+}
+.loading-bar span {
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--accent),
+    var(--accent-2, var(--accent)),
+    transparent
+  );
+  animation: loading-slide 1.6s ease-in-out infinite;
+}
+@keyframes loading-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+.loading-hint {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rank-parade img,
+  .loading-bar span {
+    animation: none;
+  }
+  .rank-parade img {
+    opacity: 0.85;
+    filter: none;
+    transform: none;
   }
 }
 
