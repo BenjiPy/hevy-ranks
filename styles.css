@@ -1063,6 +1063,74 @@ input[type="number"]::-webkit-inner-spin-button {
   margin: 8px 0 6px;
 }
 
+/* "How to reach the next tier" panel — appears inside the group's
+   accordion detail, between the composite info and the lifts table. */
+.grow-detail-panel .reco {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 10px 0 4px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(108, 140, 255, 0.35);
+  background: rgba(108, 140, 255, 0.08);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.grow-detail-panel .reco strong {
+  color: var(--text);
+}
+.grow-detail-panel .reco-icon {
+  font-size: 18px;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+.grow-detail-panel .reco-body {
+  color: var(--muted);
+}
+.grow-detail-panel .reco-nums {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted-2, var(--muted));
+  font-variant-numeric: tabular-nums;
+}
+.grow-detail-panel .reco-caveat {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-style: italic;
+}
+/* Max-rank variant: green-ish celebratory tone. */
+.grow-detail-panel .reco--max {
+  border-color: rgba(94, 200, 138, 0.4);
+  background: rgba(94, 200, 138, 0.08);
+}
+
+/* Compact inline chip on the collapsed group row ("↑ +14 kg on Bench Press").
+   Sits right after the "Next: XYZ · +0.15× BW" text. */
+.reco-chip {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(108, 140, 255, 0.12);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  /* On small screens the row is already dense — chip goes below. */
+  .reco-chip {
+    display: block;
+    margin: 4px 0 0;
+    width: fit-content;
+  }
+}
+
 .lifts-table {
   width: 100%;
   border-collapse: collapse;

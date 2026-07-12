@@ -11,6 +11,16 @@ Delta between the `v0.3.0-pre1` pre-release and the upcoming stable
 
 ### Added
 
+- **Actionable next-tier recommendations.** Each muscle group now shows
+  exactly what it takes to reach the next rank — a compact
+  "↑ +X kg on [Lift]" chip on the row (visible without opening the
+  accordion), plus a full "🎯 To reach [Next Tier]" panel in the detail
+  view. The panel spells out both the 1RM delta and the equivalent for
+  the user's typical rep range on their top compound lift. Recommendations
+  that would require a > 30% jump display a caveat encouraging balanced
+  progression across other compounds instead of chasing one lift.
+  New engine helpers: `nextTierRecommendation()` and `weightForReps()`
+  (reverse Epley).
 - **Mode reliability hint.** Secondary tip on the CSV import panel
   and extended locale notice on the results page both nudge users
   toward **API-key mode** as the precision-perfect option — it
