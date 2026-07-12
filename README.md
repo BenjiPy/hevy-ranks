@@ -1,174 +1,181 @@
 # Hevy Ranks
 
-Gamifie tes séances **Hevy** : transforme ton historique en un **rang de force par
-groupe musculaire** (Jambes, Pectoraux, Dos, Épaules, Bras, Abdos), du rang **Bronze**
-jusqu'au rang légendaire **Mythic**.
+> Turn your **Hevy** workout history into a **strength rank per muscle group** — from **Bronze** all the way up to the legendary **Mythic**.
 
-- **Basé sur la performance réelle** (1RM estimé relatif au poids de corps), pas sur le
-  volume cumulé : un gros lift dès la 1ʳᵉ séance = rang élevé immédiatement.
-- **Deux modes** : clé API Hevy (Pro) **ou** import du CSV d'export (sans clé, sans Pro).
-- **Site statique** compatible **GitHub Pages** — tout est calculé dans le navigateur,
-  aucune donnée envoyée sur un serveur.
-- **Zéro dépendance** (JS natif, `fetch`, modules ES). Projet open-source, non lucratif.
+<p align="center">
+  <img src="assets/ranks/rank-01-bronze.png" width="80" alt="Bronze" />
+  <img src="assets/ranks/rank-03-gold.png" width="80" alt="Gold" />
+  <img src="assets/ranks/rank-05-diamond.png" width="80" alt="Diamond" />
+  <img src="assets/ranks/rank-07-colossus.png" width="80" alt="Colossus" />
+  <img src="assets/ranks/rank-09-mythic.png" width="80" alt="Mythic" />
+</p>
 
-> Non affilié à Hevy. Les rangs sont des **estimations** avec des standards ajustables.
-
----
-
-## Aperçu
-
-- `index.html` — page graphique : landing, choix du mode, dashboard des rangs.
-- 9 emblèmes de rang générés par IA dans `assets/ranks/` (haltère centrale, progression Bronze abîmé → Mythic légendaire, 256 px).
-- Moteur de calcul partagé (`src/engine.js`) utilisé par le **site** et le **CLI**.
-
-Les 9 rangs : **Bronze · Iron · Gold · Platinum · Diamond · Titan · Colossus · Olympian · Mythic**.
+<p align="center">
+  <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License: MIT" />
+  <img src="https://img.shields.io/badge/dependencies-0-brightgreen.svg" alt="Zero dependencies" />
+  <img src="https://img.shields.io/badge/JavaScript-vanilla%20ES%20modules-f7df1e.svg" alt="Vanilla JS" />
+  <img src="https://img.shields.io/badge/node-%E2%89%A518-339933.svg" alt="Node >= 18" />
+  <img src="https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg" alt="GitHub Pages" />
+  <img src="https://img.shields.io/badge/privacy-100%25%20client--side-blue.svg" alt="Client-side only" />
+</p>
 
 ---
 
-## Utilisation (site web)
+## What it does
 
-### En local
+Hevy Ranks reads your training data and assigns each muscle group (**Legs, Chest, Back, Shoulders, Arms, Abs**) a rank based on your **actual performance**, not on how much volume you pile up.
 
-```bash
-npm run web       # sert le dossier sur http://localhost:8765
-# (équivaut à : python -m http.server 8765)
+- **Performance-based** — ranks come from your estimated **1RM relative to your bodyweight**. One heavy lift on your very first session can already earn a high rank.
+- **Two ways to load data** — use a **Hevy API key** (Pro) *or* import the **CSV export** (no key, no Pro account).
+- **Runs entirely in your browser** — a static site, ready for **GitHub Pages**. No data ever leaves your machine.
+- **Zero dependencies** — plain JavaScript, `fetch`, ES modules.
+
+> Not affiliated with Hevy. Ranks are **estimates** built on adjustable strength standards.
+
+The 9 ranks: **Bronze · Iron · Gold · Platinum · Diamond · Titan · Colossus · Olympian · Mythic**.
+
+---
+
+## How ranking works
+
+### 1. Estimated 1RM (the performance)
+
+For every working set (warm-ups excluded, with a load and reps), the **1RM** is estimated with the **Epley** formula (reps capped at 12):
+
+```
+estimated 1RM = load × (1 + reps / 30)
 ```
 
-Ouvre `http://localhost:8765`, puis choisis :
+Only the **best set** of each exercise is kept — this measures peak performance, not accumulation.
 
-- **Connexion par clé API** — colle ta clé Hevy (générée sur
-  [hevy.com/settings?developer](https://hevy.com/settings?developer), Pro requis).
-  Le poids de corps est récupéré automatiquement depuis Hevy (ou saisi à la main).
-- **Import CSV** — dépose ton `workouts.csv` (Hevy → Réglages → Exporter les données)
-  et renseigne ton poids de corps. Aucune clé, aucun compte Pro nécessaire.
+The **effective load** depends on the Hevy exercise type:
 
-> ⚠️ **CORS** : selon la configuration de l'API Hevy, le navigateur peut bloquer les
-> appels directs en mode clé API. Le mode **CSV** fonctionne toujours et est recommandé
-> pour un déploiement public (GitHub Pages).
+| Hevy type              | Load used                     |
+| ---------------------- | ----------------------------- |
+| `weight_reps`          | external weight               |
+| `bodyweight_weighted`  | bodyweight + added weight     |
+| `bodyweight_assisted`  | bodyweight − assistance       |
+| others (reps/time…)    | not counted                   |
 
-### Déploiement GitHub Pages
+### 2. Bodyweight-relative reference lift
 
-Le projet est un site statique : pousse le dépôt sur GitHub, puis
-**Settings → Pages → Deploy from branch** (racine du dépôt). Aucune étape de build.
+Each group has a **reference lift** (Squat for legs, Bench Press for chest, etc.). Every exercise carries a **coefficient** — its typical 1RM relative to that reference lift:
+
+```
+equivalent = (estimated 1RM / coefficient) / bodyweight
+```
+
+A group's rank is your **best value** across its exercises. Coefficients handle **English and French** exercise names and ignore accents.
+
+### 3. Muscle groups
+
+Hevy's `primary_muscle_group` values are bucketed into:
+
+| Group     | Hevy muscles                                         |
+| --------- | ---------------------------------------------------- |
+| Legs      | quadriceps, hamstrings, glutes, calves, adductors    |
+| Chest     | chest                                                |
+| Back      | lats, upper/lower back, traps                        |
+| Shoulders | shoulders, neck                                      |
+| Arms      | biceps, triceps, forearms                            |
+| Abs       | abdominals                                           |
+
+### 4. From equivalent to rank
+
+The equivalent (1RM / bodyweight) is compared against **9 thresholds** tuned per group (male standards × ~0.72 when `SEX=female`). Example for Legs (Squat reference):
+
+| Rank     | Squat eq. (1RM / BW) |
+| -------- | -------------------- |
+| Bronze   | < 0.5                |
+| Iron     | ≥ 0.5                |
+| Gold     | ≥ 0.75               |
+| Platinum | ≥ 1.0                |
+| Diamond  | ≥ 1.25               |
+| Titan    | ≥ 1.5                |
+| Colossus | ≥ 1.75               |
+| Olympian | ≥ 2.1                |
+| Mythic   | ≥ 2.5                |
 
 ---
 
-## Utilisation (CLI)
+## Getting started
 
-Pour un usage perso rapide en terminal (mode clé API) :
+### Web app (recommended)
 
 ```bash
-cp .env.example .env      # puis renseigne HEVY_API_KEY, BODYWEIGHT_KG, SEX
+npm run web       # serves the folder on http://localhost:8765
+```
+
+Open `http://localhost:8765`, then pick a mode:
+
+- **API key** — paste your Hevy key (generated at
+  [hevy.com/settings?developer](https://hevy.com/settings?developer), Pro required).
+  Bodyweight is pulled automatically from Hevy, or entered manually.
+- **CSV import** — drop your `workouts.csv` (Hevy → Settings → Export Data) and enter your
+  bodyweight. No key, no Pro account needed.
+
+> ⚠️ **CORS**: depending on the Hevy API configuration, the browser may block direct API
+> calls in key mode. **CSV mode always works** and is recommended for public deployments.
+
+### CLI
+
+For a quick terminal check (API-key mode):
+
+```bash
+cp .env.example .env      # then fill in HEVY_API_KEY, BODYWEIGHT_KG, SEX
 npm run cli
 ```
 
-Affiche un rang par groupe musculaire directement dans le terminal.
+### Deploy to GitHub Pages
+
+It's a static site: push the repo, then **Settings → Pages → Deploy from branch** (repo
+root). No build step.
 
 ---
 
-## Comment le rang est calculé
-
-### 1. Le 1RM estimé (la performance)
-
-Pour chaque série (hors échauffement, avec charge et reps), on estime le **1RM** avec la
-formule d'**Epley** (reps plafonnées à 12) :
+## Project structure
 
 ```
-1RM estimé = charge × (1 + reps/30)
-```
-
-On ne garde que **la meilleure série** de chaque exercice. C'est une mesure de perf, pas
-d'accumulation.
-
-La **charge effective** dépend du type d'exercice Hevy :
-
-| Type Hevy              | Charge utilisée               |
-| ---------------------- | ----------------------------- |
-| `weight_reps`          | poids externe                 |
-| `bodyweight_weighted`  | poids de corps + poids ajouté |
-| `bodyweight_assisted`  | poids de corps − assistance   |
-| autres (reps/durée…)   | non compté                    |
-
-### 2. Équivalent « lift de référence » relatif au poids de corps
-
-Chaque groupe a un **lift de référence** (Squat pour les jambes, Développé couché pour les
-pecs, etc.). Chaque exercice a un **coefficient** = son 1RM typique rapporté à ce lift de
-référence. On calcule :
-
-```
-équivalent = (1RM estimé / coefficient) / poids_de_corps
-```
-
-Le **rang d'un groupe = ta meilleure valeur** parmi ses exercices (ta perf unique).
-Les coefficients gèrent l'**anglais et le français** et sont insensibles aux accents.
-
-### 3. Groupes musculaires
-
-Les `primary_muscle_group` de Hevy sont regroupés :
-
-- **Jambes** : quadriceps, ischios, fessiers, mollets, adducteurs, abducteurs
-- **Pectoraux** : chest
-- **Dos** : lats, upper/lower back, traps
-- **Épaules** : shoulders, neck
-- **Bras** : biceps, triceps, avant-bras
-- **Abdos** : abdominals
-
-### 4. Des paliers au rang
-
-L'équivalent (1RM/poids de corps) est comparé à **9 paliers** propres à chaque groupe
-(standards masculins × ~0.72 si `SEX=female`). Exemple pour les Jambes (référence Squat) :
-
-| Rang     | Éq. Squat (1RM/PdC) |
-| -------- | ------------------- |
-| Bronze   | < 0.5               |
-| Iron     | ≥ 0.5               |
-| Gold     | ≥ 0.75              |
-| Platinum | ≥ 1.0               |
-| Diamond  | ≥ 1.25              |
-| Titan    | ≥ 1.5               |
-| Colossus | ≥ 1.75              |
-| Olympian | ≥ 2.1               |
-| Mythic   | ≥ 2.5               |
-
----
-
-## Personnaliser
-
-- **Paliers, groupes, lifts de référence** : objet `GROUPS` dans `src/engine.js`.
-- **Coefficients par exercice (EN/FR)** : `GROUP_COEFFS` dans `src/engine.js`.
-- **Emblèmes** : remplace/régénère les fichiers de `assets/ranks/` (noms conservés dans `RANK_TIERS`, `src/engine.js`), puis lance `python scripts/optimize-ranks.py` pour les redimensionner/compresser.
-- **Catalogue d'exercices** : `npm run refresh-catalog` (régénère `data/exercise-templates.json`).
-
-## Structure
-
-```
-index.html / styles.css / app.js   # site web (GitHub Pages)
-assets/ranks/rank-01..09-*.png      # emblèmes de rang (IA, 256px)
-data/exercise-templates.json        # catalogue titre -> muscle (embarqué)
+index.html / styles.css / app.js    # web app (GitHub Pages)
+assets/ranks/rank-01..09-*.png       # AI-generated rank emblems (256 px)
+data/exercise-templates.json         # exercise title -> muscle catalog (bundled)
 src/
-  engine.js   # moteur de rang partagé (navigateur + Node)
-  csv.js      # parseur du CSV d'export Hevy
-  hevy.js     # client API Hevy (workouts, templates, poids de corps)
-  env.js      # mini parseur .env (CLI uniquement)
-  index.js    # CLI
-scripts/refresh-catalog.js
+  engine.js   # shared ranking engine (browser + Node)
+  csv.js      # Hevy CSV export parser
+  hevy.js     # Hevy API client (workouts, templates, bodyweight)
+  env.js      # tiny .env parser (CLI only)
+  index.js    # CLI entry point
+scripts/
+  refresh-catalog.js    # regenerate data/exercise-templates.json
+  optimize-ranks.py     # resize/compress rank images
 ```
 
-## Limites connues
+## Customizing
 
-- API Hevy en **v0.0.1** (susceptible de changer) et **CORS** possible en navigateur.
-- Coefficients et seuils = **approximations** (standards de force courants), ajustables.
-- Les exercices **au poids de corps sans charge** (reps only) et le **cardio** ne comptent
-  pas dans le rang de force.
-- Le rang par **muscle individuel** (et non par groupe) est prévu pour plus tard.
+- **Thresholds, groups, reference lifts** → `GROUPS` object in `src/engine.js`.
+- **Per-exercise coefficients (EN/FR)** → `GROUP_COEFFS` in `src/engine.js`.
+- **Emblems** → replace/regenerate files in `assets/ranks/` (keep the names from
+  `RANK_TIERS` in `src/engine.js`), then run `npm run optimize-ranks`.
+- **Exercise catalog** → `npm run refresh-catalog`.
+
+## Known limitations
+
+- Hevy API is **v0.0.1** (subject to change) and may hit **CORS** in the browser.
+- Coefficients and thresholds are **approximations** (common strength standards), adjustable.
+- **Bodyweight-only** movements (reps only) and **cardio** don't count toward strength rank.
+- Per-**individual-muscle** ranking (instead of per group) is planned.
 
 ## Roadmap
 
-- Rang par muscle précis (option), en plus du rang par groupe.
-- Leaderboard multi-utilisateurs (nécessite un backend + accord de Hevy).
-- Bodyweight-reps score pour la callisthénie.
+- Precise per-muscle rank (opt-in), alongside the per-group rank.
+- Multi-user leaderboard (needs a backend + Hevy's agreement).
+- Bodyweight-reps score for calisthenics.
 
-## Liens
+## Links
 
-- API Hevy : https://api.hevyapp.com/docs
-- Générer sa clé : https://hevy.com/settings?developer
+- Hevy API docs: https://api.hevyapp.com/docs
+- Generate your key: https://hevy.com/settings?developer
+
+## License
+
+[MIT](LICENSE) — open-source, non-commercial project.
