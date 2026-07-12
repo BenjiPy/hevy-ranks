@@ -199,6 +199,92 @@ function deburr(s) {
     .toLowerCase();
 }
 
+/**
+ * Broad EN+FR keyword hints used to guess a muscle group directly from an
+ * exercise title when it isn't in the catalog (typical for CSV imports in
+ * non-English locales — Hevy's template catalog is English-only, but the
+ * CSV export uses the user's locale). Written WITHOUT accents (titles are
+ * deburred before comparison). Order matters: first match wins.
+ */
+const GROUP_HINTS = [
+  // Cardio / mobility / combat sports — silently ignored (returns null).
+  ["__skip__", [
+    "sparring", "boxe", "boxing", "muay", "kickbox", "mma", "judo", "grappling",
+    "cardio", "course", "running", "run", "velo", "cycling", "bike", "aerobic",
+    "rope", "corde a sauter", "jump rope",
+    "stretch", "etirement", "yoga", "mobility", "mobilite", "foam roll",
+    "walk", "marche", "hike",
+  ]],
+  ["legs", [
+    "squat", "leg press", "presse a cuisses", "presse cuisse", "hack squat",
+    "leg extension", "extension jambe", "extension des jambes", "extension ja",
+    "leg curl", "curl ischio", "curl jambe", "hamstring",
+    "lunge", "fente",
+    "calf", "mollet", "extension mollet",
+    "deadlift", "souleve de terre", "romanian",
+    "hip thrust", "poussee de hanche", "glute bridge", "fessier", "glute",
+    "adductor", "abductor", "adducteur", "abducteur",
+    "step up",
+  ]],
+  ["chest", [
+    "bench press", "developpe couche", "developpe incline", "developpe decline",
+    "chest press", "pec deck", "peck deck", "butterfly",
+    "ecarte", "ecartes", "fly", "cable fly", "chest fly",
+    "pectoraux", "pec ", "chest ", "push up", "pompes", "pushup", "dip",
+  ]],
+  ["back", [
+    "row", "rowing", "tirage", "seated row", "bent over",
+    "pull up", "pull-up", "pullup", "chin up", "chinup", "traction",
+    "pulldown", "tirage vertical", "tirage nuque", "lat ",
+    "deadlift", "souleve de terre",
+    "shrug", "haussement",
+    "reverse fly", "face pull", "rear delt", "oiseau",
+    "back extension", "extension du dos", "hyperextension",
+    "dos ",
+  ]],
+  ["shoulders", [
+    "overhead press", "shoulder press", "developpe militaire", "developpe epaule",
+    "arnold", "ohp",
+    "lateral raise", "elevation lateral", "elevation frontale", "front raise",
+    "upright row", "tirage menton",
+    "epaule",
+  ]],
+  ["arms", [
+    "bicep", "biceps", "curl", "hammer curl", "curl marteau", "preacher",
+    "concentration curl", "curl inverse",
+    "tricep", "triceps", "extension triceps", "extension tri",
+    "pushdown", "poulie triceps", "kickback",
+    "skull crush", "barre au front",
+    "forearm", "avant-bras", "wrist curl",
+  ]],
+  ["core", [
+    "crunch", "sit up", "sit-up", "situp",
+    "plank", "gainage", "planche",
+    "ab wheel", "roulette abdo", "ab roller",
+    "leg raise", "releve de jambes", "releve de genoux", "knee raise",
+    "hanging leg", "toes to bar",
+    "russian twist", "wood chop",
+    "abdo", "abs ", "core", "oblique",
+  ]],
+];
+
+/**
+ * Guess a group key from a free-form exercise title. Returns the group key,
+ * "__skip__" for cardio/mobility (caller should silently ignore), or null
+ * when no hint matches. Used as a fallback for CSV-mode exercises whose
+ * template isn't in the English-only catalog.
+ */
+export function inferGroupFromTitle(rawTitle) {
+  const norm = deburr(rawTitle || "");
+  if (!norm) return null;
+  for (const [group, hints] of GROUP_HINTS) {
+    for (const h of hints) {
+      if (norm.includes(h)) return group;
+    }
+  }
+  return null;
+}
+
 /** Convert workouts from the Hevy API into the engine's "sessions" format. */
 export function workoutsToSessions(workouts) {
   return (workouts ?? []).map((w) => ({
@@ -389,13 +475,26 @@ export function computeRanks(
       let tpl = ex.templateId ? catalog.byId.get(ex.templateId) : null;
       if (!tpl && ex.title) tpl = catalog.byTitle.get(catalog.norm(ex.title));
       const primary = tpl?.primary;
-      const groupKey = primary ? PRIMARY_TO_GROUP[primary] : null;
+      let groupKey = primary ? PRIMARY_TO_GROUP[primary] : null;
       const rawTitle = ex.title ?? tpl?.title ?? "";
 
       const type = ex.type ?? tpl?.type ?? "weight_reps";
       // Cardio, mobility, etc.: silently ignored (not surfaced in the
       // dashboard's "not counted" section which is strength-only).
-      const isStrength = STRENGTH_TYPES.has(type);
+      let isStrength = STRENGTH_TYPES.has(type);
+
+      // Fallback for CSV imports in non-English locales: the Hevy template
+      // catalog is English-only, so a French title like "Squat (Barre)" or
+      // "Presse a Cuisses" won't be found. Try to infer the group directly
+      // from the title using FR+EN keyword hints.
+      if (!groupKey && rawTitle) {
+        const guess = inferGroupFromTitle(rawTitle);
+        if (guess === "__skip__") {
+          isStrength = false; // silently ignored (cardio / mobility / combat)
+        } else if (guess) {
+          groupKey = guess;
+        }
+      }
 
       if (!groupKey) {
         if (rawTitle && isStrength) {
