@@ -4,6 +4,15 @@ All notable changes to Hevy Ranks are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] — 2026-07-12
+
+### Fixed
+
+- **Engine:** `computeRanks` returned `hasData: true` for a group when
+  `bodyweightKg` was missing or invalid, while `tier` and `eqRatio` were
+  `null`. Any consumer reading `group.tier.name` on that basis would
+  crash. `hasData` now also requires a computable composite ratio.
+
 ## [0.2.0] — 2026-07-12
 
 Big calibration overhaul, driven by the first wave of community feedback on

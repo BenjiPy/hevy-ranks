@@ -1,6 +1,6 @@
 {
   "name": "hevy-ranks",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Gamifie tes seances Hevy en rangs de force par groupe musculaire (web + CLI). Open-source, non lucratif.",
   "type": "module",
   "bin": {
