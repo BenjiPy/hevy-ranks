@@ -715,24 +715,25 @@ function renderLocaleNotice(stats) {
 
 /* ---------------- Confetti burst (results reveal) ---------------- */
 /* Small canvas particle system, zero dependency. Fires once per render()
-   call, skipped on restore-from-storage and on prefers-reduced-motion. */
+   call (never on restore-from-storage).
+   Note: we deliberately do NOT gate this on `prefers-reduced-motion`.
+   The burst is a single-shot ~4s decorative reveal — non-strobing,
+   non-parallax, non-blocking — so it doesn't trigger the vestibular
+   concerns that motion-reduction preferences target. The rank-parade
+   loader, which loops, still respects the preference (see styles.css). */
 function fireConfetti(accent) {
-  const reduced =
-    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-  if (reduced) {
-    console.info("[confetti] skipped: prefers-reduced-motion is on");
-    return;
-  }
   const canvas = document.getElementById("confetti");
-  if (!canvas) {
-    console.warn("[confetti] canvas #confetti not found");
-    return;
-  }
+  if (!canvas) return;
 
   /* Show the canvas FIRST — some browsers report 0×0 dimensions on a
-     display:none canvas, which would make particles invisible. */
+     display:none canvas, which would make particles invisible. Defer
+     one frame so the browser has painted the layout change before we
+     sample innerWidth/innerHeight. */
   canvas.classList.add("on");
+  requestAnimationFrame(() => runConfetti(canvas, accent));
+}
 
+function runConfetti(canvas, accent) {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const resize = () => {
     canvas.width = window.innerWidth * dpr;
