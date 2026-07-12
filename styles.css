@@ -348,6 +348,17 @@ input[type="number"]::-webkit-inner-spin-button {
   justify-content: center;
   flex-wrap: wrap;
 }
+.resume-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+.resume-hint {
+  color: var(--muted);
+  font-size: 13px;
+}
 .hint {
   color: var(--muted);
   font-size: 14px;

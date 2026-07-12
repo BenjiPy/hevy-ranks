@@ -9,6 +9,7 @@ import {
 } from "./src/engine.js";
 
 const RANK_IMG = (tier) => `assets/ranks/${tier.img}`;
+const RESULTS_KEY = "hevy_results_html";
 const nf = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
 const fmt = (n) => nf.format(n);
 
@@ -56,11 +57,27 @@ function loadCatalog() {
 
 /* ---------------- Navigation ---------------- */
 const views = [...document.querySelectorAll(".view")];
-function show(id) {
+let currentView = views.find((v) => !v.classList.contains("hidden"))?.id ?? "landing";
+history.replaceState({ view: currentView }, "");
+
+function show(id, push = true) {
+  if (id === currentView) return;
+  currentView = id;
   for (const v of views) v.classList.toggle("hidden", v.id !== id);
   window.scrollTo({ top: 0, behavior: "smooth" });
+  if (push) history.pushState({ view: id }, "");
 }
+
+window.addEventListener("popstate", (e) => {
+  show(e.state?.view ?? "landing", false);
+});
+
 document.addEventListener("click", (e) => {
+  const back = e.target.closest("[data-back]");
+  if (back) {
+    history.back();
+    return;
+  }
   const btn = e.target.closest("[data-goto]");
   if (btn) show(btn.dataset.goto);
 });
@@ -84,6 +101,7 @@ function fillStrip(el) {
 fillStrip(document.getElementById("rankStrip"));
 buildRanksPage();
 enhanceSelects();
+restoreResults();
 
 /* ---------------- Custom listbox (replaces native <select>) ---------------- */
 function enhanceSelects() {
@@ -398,7 +416,33 @@ function render(result, meta) {
     ? `${unmatched} exercise(s) weren't recognized (custom / not loaded) and were skipped. Ranks are tunable estimates.`
     : "Ranks are estimates based on the Epley 1RM and tunable strength standards.";
 
+  persistResults();
   show("results");
+}
+
+/* ---------------- Persist results (survive navigation & reload) ---------------- */
+function persistResults() {
+  document.getElementById("resumeRow")?.classList.remove("hidden");
+  try {
+    sessionStorage.setItem(
+      RESULTS_KEY,
+      document.getElementById("results").innerHTML
+    );
+  } catch {
+    /* storage unavailable (private mode, quota): keep in-DOM only */
+  }
+}
+
+function restoreResults() {
+  let saved = null;
+  try {
+    saved = sessionStorage.getItem(RESULTS_KEY);
+  } catch {
+    /* ignore */
+  }
+  if (!saved) return;
+  document.getElementById("results").innerHTML = saved;
+  document.getElementById("resumeRow")?.classList.remove("hidden");
 }
 
 /* ---------------- How-it-works page ---------------- */
