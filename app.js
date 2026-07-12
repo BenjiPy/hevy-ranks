@@ -334,20 +334,39 @@ dropzone.addEventListener("drop", (e) => {
 });
 
 function readCsv(file) {
-  const reader = new FileReader();
-  reader.onload = () => {
-    csvText = reader.result;
+  const onOk = (text) => {
+    csvText = stripBom(text);
     dzText.textContent = `✓ ${file.name}`;
     dropzone.classList.add("loaded");
   };
-  reader.onerror = () => {
+  const onErr = () => {
     csvText = null;
     dropzone.classList.remove("loaded");
     showToast(
       "Couldn't read that file. On iOS, make sure it's downloaded from iCloud first."
     );
   };
-  reader.readAsText(file);
+
+  /* Prefer file.text() (spec-mandated UTF-8). iOS Safari's
+     FileReader.readAsText can silently fall back to Windows-1252 for
+     files coming from the Files/iCloud picker, which turns every
+     accented exercise title (e.g. "Développé couché") into mojibake
+     and breaks keyword matching in `engine.js`. */
+  if (typeof file.text === "function") {
+    file.text().then(onOk).catch(onErr);
+  } else {
+    const reader = new FileReader();
+    reader.onload = () => onOk(String(reader.result || ""));
+    reader.onerror = onErr;
+    reader.readAsText(file, "UTF-8");
+  }
+}
+
+/* Strip a UTF-8 BOM (\uFEFF) if the file was saved with one — otherwise
+   the first header name becomes "\uFEFFtitle" and the column lookup
+   silently fails. */
+function stripBom(s) {
+  return s && s.charCodeAt(0) === 0xfeff ? s.slice(1) : s;
 }
 
 document.getElementById("runCsv").addEventListener("click", async () => {
@@ -664,9 +683,21 @@ function render(result, meta) {
 /* Small canvas particle system, zero dependency. Fires once per render()
    call, skipped on restore-from-storage and on prefers-reduced-motion. */
 function fireConfetti(accent) {
-  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+  const reduced =
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  if (reduced) {
+    console.info("[confetti] skipped: prefers-reduced-motion is on");
+    return;
+  }
   const canvas = document.getElementById("confetti");
-  if (!canvas) return;
+  if (!canvas) {
+    console.warn("[confetti] canvas #confetti not found");
+    return;
+  }
+
+  /* Show the canvas FIRST — some browsers report 0×0 dimensions on a
+     display:none canvas, which would make particles invisible. */
+  canvas.classList.add("on");
 
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const resize = () => {
@@ -677,7 +708,6 @@ function fireConfetti(accent) {
   };
   resize();
   window.addEventListener("resize", resize, { once: true });
-  canvas.classList.add("on");
 
   const ctx = canvas.getContext("2d");
   const W = canvas.width;
