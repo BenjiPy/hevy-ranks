@@ -10,6 +10,7 @@ import {
 
 const RANK_IMG = (tier) => `assets/ranks/${tier.img}`;
 const RESULTS_KEY = "hevy_results_html";
+const VIEW_KEY = "hevy_view";
 const nf = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
 const fmt = (n) => nf.format(n);
 
@@ -66,6 +67,13 @@ function show(id, push = true) {
   for (const v of views) v.classList.toggle("hidden", v.id !== id);
   window.scrollTo({ top: 0, behavior: "smooth" });
   if (push) history.pushState({ view: id }, "");
+  if (id !== "loading") {
+    try {
+      sessionStorage.setItem(VIEW_KEY, id);
+    } catch {
+      /* storage unavailable: navigation still works in-memory */
+    }
+  }
 }
 
 window.addEventListener("popstate", (e) => {
@@ -434,15 +442,33 @@ function persistResults() {
 }
 
 function restoreResults() {
-  let saved = null;
+  let savedHtml = null;
+  let savedView = null;
   try {
-    saved = sessionStorage.getItem(RESULTS_KEY);
+    savedHtml = sessionStorage.getItem(RESULTS_KEY);
+    savedView = sessionStorage.getItem(VIEW_KEY);
   } catch {
-    /* ignore */
+    /* storage unavailable: nothing to restore */
   }
-  if (!saved) return;
-  document.getElementById("results").innerHTML = saved;
-  document.getElementById("resumeRow")?.classList.remove("hidden");
+
+  const hasResults = Boolean(savedHtml);
+  if (hasResults) {
+    document.getElementById("results").innerHTML = savedHtml;
+    document.getElementById("resumeRow")?.classList.remove("hidden");
+  }
+
+  /* Re-open the last view (skip transient/invalid ones). */
+  const restorable = new Set([
+    "landing",
+    "setup-api",
+    "setup-csv",
+    "ranks",
+    ...(hasResults ? ["results"] : []),
+  ]);
+  if (savedView && savedView !== "landing" && restorable.has(savedView)) {
+    show(savedView, false);
+    history.replaceState({ view: savedView }, "");
+  }
 }
 
 /* ---------------- How-it-works page ---------------- */
