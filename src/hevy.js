@@ -1,13 +1,13 @@
 const BASE_URL = "https://api.hevyapp.com";
 
 /**
- * Petit client pour l'API publique Hevy.
- * Doc : https://api.hevyapp.com/docs
- * Auth : header `api-key` (necessite Hevy Pro).
+ * Small client for the public Hevy API.
+ * Docs: https://api.hevyapp.com/docs
+ * Auth: `api-key` header (requires Hevy Pro).
  */
 export class HevyClient {
   constructor(apiKey) {
-    if (!apiKey) throw new Error("Cle API Hevy manquante.");
+    if (!apiKey) throw new Error("Missing Hevy API key.");
     this.apiKey = apiKey;
   }
 
@@ -17,7 +17,7 @@ export class HevyClient {
       if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
     }
 
-    // Retry simple en cas de rate limit (429) ou erreur serveur (5xx).
+    // Simple retry on rate limit (429) or server error (5xx).
     for (let attempt = 0; attempt < 4; attempt++) {
       const res = await fetch(url, {
         headers: { "api-key": this.apiKey, accept: "application/json" },
@@ -33,19 +33,19 @@ export class HevyClient {
 
       const body = await res.text().catch(() => "");
       throw new Error(
-        `Hevy API ${res.status} sur ${path} : ${body || res.statusText}`
+        `Hevy API ${res.status} on ${path}: ${body || res.statusText}`
       );
     }
-    throw new Error(`Hevy API : echec apres plusieurs tentatives sur ${path}`);
+    throw new Error(`Hevy API: failed after several attempts on ${path}`);
   }
 
-  /** Nombre total de seances sur le compte. */
+  /** Total number of workouts on the account. */
   async getWorkoutCount() {
     const data = await this.#get("/v1/workouts/count");
     return data.workout_count ?? 0;
   }
 
-  /** Recupere TOUTES les seances (pagination automatique, max 10/page). */
+  /** Fetch ALL workouts (auto-paginated, max 10/page). */
   async getAllWorkouts({ onProgress } = {}) {
     const first = await this.#get("/v1/workouts", { page: 1, pageSize: 10 });
     const pageCount = first.page_count ?? 1;
@@ -61,9 +61,9 @@ export class HevyClient {
   }
 
   /**
-   * Recupere le poids de corps le plus recent depuis les mensurations Hevy.
-   * GET /v1/body_measurements (paginé, max 10/page). Renvoie un nombre (kg)
-   * ou null si aucune mesure de poids n'est trouvee.
+   * Fetch the most recent bodyweight from Hevy body measurements.
+   * GET /v1/body_measurements (paginated, max 10/page). Returns a number (kg)
+   * or null when no weight measurement is found.
    */
   async getLatestBodyweight() {
     let best = null; // { date, weight }
@@ -90,7 +90,7 @@ export class HevyClient {
     return best?.weight ?? null;
   }
 
-  /** Recupere TOUS les modeles d'exercices (max 100/page) -> map id -> template. */
+  /** Fetch ALL exercise templates (max 100/page) -> map id -> template. */
   async getExerciseTemplateMap({ onProgress } = {}) {
     const map = new Map();
     const first = await this.#get("/v1/exercise_templates", {

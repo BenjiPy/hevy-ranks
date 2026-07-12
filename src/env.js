@@ -5,16 +5,16 @@ import { dirname, join } from "node:path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /**
- * Charge les variables d'un fichier .env dans process.env.
- * Parseur minimal (pas de dependance externe) : gere KEY=VALUE,
- * les lignes vides, les commentaires (#) et les guillemets optionnels.
+ * Load variables from a .env file into process.env.
+ * Minimal parser (zero external dependency): handles KEY=VALUE,
+ * empty lines, comments (#) and optional surrounding quotes.
  */
 export function loadEnv(path = join(__dirname, "..", ".env")) {
   let raw;
   try {
     raw = readFileSync(path, "utf8");
   } catch {
-    return; // pas de .env : on se rabat sur l'environnement systeme
+    return; // no .env: fall back to the system environment
   }
 
   for (const line of raw.split(/\r?\n/)) {

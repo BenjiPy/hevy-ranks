@@ -1,14 +1,14 @@
 /**
- * Parseur du CSV d'export Hevy (mode "sans cle API").
- * Colonnes attendues :
+ * Parser for the Hevy CSV export (used in the "no API key" mode).
+ * Expected columns:
  * title, start_time, end_time, description, exercise_title, superset_id,
  * exercise_notes, set_index, set_type, weight_kg, reps, distance_km,
  * duration_seconds, rpe
  *
- * Transforme le CSV en "sessions" au format attendu par le moteur (engine.js).
+ * Turns the CSV into the "sessions" format expected by the engine (engine.js).
  */
 
-/** Tokenise une ligne CSV en gerant les guillemets et les "" echappes. */
+/** Tokenize a CSV line, handling quotes and "" escapes. */
 function parseLine(line) {
   const out = [];
   let field = "";
@@ -39,7 +39,7 @@ function parseLine(line) {
   return out;
 }
 
-/** Decoupe le texte CSV en lignes en respectant les champs multi-lignes. */
+/** Split the CSV text into rows, respecting multi-line quoted fields. */
 function splitRows(text) {
   const rows = [];
   let row = "";
@@ -66,7 +66,7 @@ const num = (v) => {
 };
 
 /**
- * @param {string} text - contenu brut du CSV
+ * @param {string} text - raw CSV content
  * @returns {Array} sessions [{ date, title, exercises:[{ title, sets:[{weight,reps,type}] }] }]
  */
 export function parseHevyCsv(text) {
@@ -84,7 +84,7 @@ export function parseHevyCsv(text) {
     reps: col("reps"),
   };
 
-  const sessions = new Map(); // cle (title|start) -> session
+  const sessions = new Map(); // key (title|start) -> session
   for (let r = 1; r < rows.length; r++) {
     const c = parseLine(rows[r]);
     const wTitle = c[idx.title] ?? "";

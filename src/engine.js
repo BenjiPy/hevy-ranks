@@ -1,31 +1,31 @@
 /**
- * Moteur de rang partage (navigateur + Node), sans dependance ni API Node.
+ * Shared ranking engine (browser + Node), zero dependency, no Node-only APIs.
  *
- * v0.2 : le rang d'un groupe est un COMPOSITE des exos "compounds" (non
- * isolation) ayant ete pratiques sur au moins MIN_SESSIONS seances distinctes.
- * On calcule pour chaque exo un 1RM estime (Epley, reps cappees a 12), on le
- * normalise via un coefficient specifique a l'exo (rapport au lift de reference
- * du groupe), on le rapporte au poids de corps, puis on aggrege les top 3
- * compounds avec des poids degressifs [1.0, 0.5, 0.25].
+ * v0.2: a group's rank is a COMPOSITE of the user's compound lifts (non
+ * isolation) practiced on at least MIN_SESSIONS distinct sessions. For each
+ * exercise we estimate a 1RM (Epley, reps capped at 12), normalize it with
+ * an exercise-specific coefficient (relative to the group's reference lift),
+ * divide by bodyweight, then aggregate the top 3 compounds with decreasing
+ * weights [1.0, 0.5, 0.25].
  *
- * Les isolations (calf press, back extension, pec deck, curls, etc.) ne
- * peuvent PAS definir a elles seules le rang d'un groupe : elles servent
- * uniquement de repli si aucun compound qualifie n'est trouve (et le rang
- * est alors plafonne a "Titan" pour eviter les faux Mythic).
+ * Isolation lifts (calf press, back extension, pec deck, curls, etc.)
+ * CANNOT define a group's rank on their own: they are only used as a
+ * fallback when no qualifying compound is found (in which case the rank
+ * is capped at "Titan" to avoid false Mythics).
  */
 
-/** Nombre minimal de seances distinctes pour qu'un exo compte dans le rang. */
+/** Minimum number of distinct sessions for an exercise to count in the rank. */
 export const MIN_SESSIONS = 3;
 
-/** Poids degressifs pour l'aggregation composite (top 3 compounds). */
+/** Decreasing weights used for the composite aggregation (top 3 compounds). */
 const COMPOSITE_WEIGHTS = [1.0, 0.5, 0.25];
 
-/** Tier max atteignable via des isolations seulement (index dans RANK_TIERS). */
+/** Max tier reachable via isolation lifts only (index in RANK_TIERS). */
 const ISOLATION_TIER_CAP = 5; // Titan
-/** Tier max quand aucun exo n'atteint MIN_SESSIONS (donnee tres partielle). */
+/** Max tier when no exercise reaches MIN_SESSIONS (very partial data). */
 const FEW_SESSIONS_TIER_CAP = 3; // Platinum
 
-/** Les 9 rangs, du plus bas au plus haut, avec leur embleme et couleur. */
+/** The 9 ranks, from lowest to highest, with their emblem and color. */
 export const RANK_TIERS = [
   { name: "Bronze", img: "rank-01-bronze.png", color: "#c07a3e" },
   { name: "Iron", img: "rank-02-iron.png", color: "#9aa1ab" },
@@ -39,17 +39,17 @@ export const RANK_TIERS = [
 ];
 
 /**
- * Configuration par groupe musculaire.
- * - primaries : valeurs Hevy `primary_muscle_group` rattachees au groupe
- * - ref       : lift de reference (coeff = 1.0)
- * - thresholds: 9 seuils "equivalent reference 1RM / poids de corps" (index = tier)
- * - def       : coefficient par defaut pour un exercice non liste du groupe
- * Standards masculins ; multiplies par ~0.72 si sex = female.
+ * Configuration per muscle group.
+ * - primaries : Hevy `primary_muscle_group` values mapped to the group
+ * - ref       : reference lift (coeff = 1.0)
+ * - thresholds: 9 thresholds "reference 1RM equivalent / bodyweight" (index = tier)
+ * - def       : default coefficient for an exercise not listed in the group
+ * Male standards; multiplied by ~0.72 when sex = female.
  */
 export const GROUPS = {
   legs: {
     key: "legs",
-    label: "Jambes",
+    label: "Legs",
     ref: "Squat",
     primaries: ["quadriceps", "hamstrings", "glutes", "calves", "abductors", "adductors"],
     thresholds: [0, 0.5, 0.75, 1.0, 1.25, 1.5, 1.85, 2.3, 3.0],
@@ -57,47 +57,47 @@ export const GROUPS = {
   },
   chest: {
     key: "chest",
-    label: "Pectoraux",
-    ref: "Developpe couche",
+    label: "Chest",
+    ref: "Bench press",
     primaries: ["chest"],
     thresholds: [0, 0.4, 0.6, 0.8, 1.0, 1.25, 1.55, 1.9, 2.4],
     def: 1.1,
   },
   back: {
     key: "back",
-    label: "Dos",
-    ref: "Rowing barre",
+    label: "Back",
+    ref: "Barbell row",
     primaries: ["lats", "upper_back", "lower_back", "traps"],
     thresholds: [0, 0.4, 0.6, 0.8, 1.0, 1.25, 1.55, 1.9, 2.3],
     def: 1.1,
   },
   shoulders: {
     key: "shoulders",
-    label: "Epaules",
-    ref: "Developpe militaire",
+    label: "Shoulders",
+    ref: "Overhead press",
     primaries: ["shoulders", "neck"],
     thresholds: [0, 0.3, 0.4, 0.55, 0.7, 0.85, 1.05, 1.3, 1.6],
     def: 1.0,
   },
   arms: {
     key: "arms",
-    label: "Bras",
-    ref: "Curl barre",
+    label: "Arms",
+    ref: "Barbell curl",
     primaries: ["biceps", "triceps", "forearms"],
     thresholds: [0, 0.25, 0.35, 0.45, 0.55, 0.7, 0.85, 1.05, 1.3],
     def: 1.0,
   },
   core: {
     key: "core",
-    label: "Abdos",
-    ref: "Crunch leste",
+    label: "Core",
+    ref: "Weighted crunch",
     primaries: ["abdominals"],
     thresholds: [0, 0.15, 0.25, 0.35, 0.45, 0.6, 0.8, 1.05, 1.4],
     def: 1.0,
   },
 };
 
-/** primary_muscle_group Hevy -> cle de groupe majeur. */
+/** Hevy `primary_muscle_group` -> major group key. */
 const PRIMARY_TO_GROUP = (() => {
   const m = {};
   for (const g of Object.values(GROUPS)) {
@@ -107,10 +107,10 @@ const PRIMARY_TO_GROUP = (() => {
 })();
 
 /**
- * Coefficients par exercice, par groupe (coeff = 1RM exo / 1RM reference).
- * Motifs les plus specifiques d'abord. Un exercice non trouve prend `def`.
- * Mots-cles en anglais ET francais, ecrits SANS accents (le titre est
- * "deburre" avant comparaison), pour marcher quelle que soit la langue Hevy.
+ * Per-exercise coefficients, per group (coeff = exercise 1RM / reference 1RM).
+ * Most specific patterns first. An exercise with no match uses `def`.
+ * Keywords in BOTH English and French, written WITHOUT accents (titles are
+ * "deburred" before comparison), so it works regardless of the Hevy locale.
  */
 const GROUP_COEFFS = {
   legs: [
@@ -191,7 +191,7 @@ const GROUP_COEFFS = {
   ],
 };
 
-/** Retire les accents/diacritiques pour une comparaison robuste. */
+/** Strip accents/diacritics for robust comparison. */
 function deburr(s) {
   return String(s)
     .normalize("NFD")
@@ -199,7 +199,7 @@ function deburr(s) {
     .toLowerCase();
 }
 
-/** Convertit des workouts de l'API Hevy vers le format "sessions" du moteur. */
+/** Convert workouts from the Hevy API into the engine's "sessions" format. */
 export function workoutsToSessions(workouts) {
   return (workouts ?? []).map((w) => ({
     date: (w.start_time ?? w.created_at ?? "").slice(0, 10),
@@ -216,7 +216,7 @@ export function workoutsToSessions(workouts) {
   }));
 }
 
-/** Estimation du 1RM (Epley), reps plafonnees a 12 pour rester realiste. */
+/** 1RM estimation (Epley formula), reps capped at 12 to stay realistic. */
 export function estimate1RM(load, reps) {
   const w = Number(load);
   const r = Math.min(Number(reps), 12);
@@ -225,7 +225,7 @@ export function estimate1RM(load, reps) {
   return w * (1 + r / 30);
 }
 
-/** Types Hevy consideres comme "musculation" (par opposition au cardio/mobilite). */
+/** Hevy exercise types considered "strength" (as opposed to cardio/mobility). */
 const STRENGTH_TYPES = new Set([
   "weight_reps",
   "bodyweight_weighted",
@@ -237,7 +237,7 @@ const STRENGTH_TYPES = new Set([
   "weighted_bodyweight",
 ]);
 
-/** Charge effective d'une serie selon le type d'exercice Hevy. */
+/** Effective load of a set depending on the Hevy exercise type. */
 export function effectiveLoad(weightKg, type, bodyweightKg) {
   const w = Number(weightKg);
   const bw = Number(bodyweightKg) || 0;
@@ -251,7 +251,7 @@ export function effectiveLoad(weightKg, type, bodyweightKg) {
     case "bodyweight_assisted":
       return Math.max(bw - (hasW ? w : 0), 0);
     default:
-      // reps_only, duration, distance_duration, etc. : pas de charge mesurable
+      // reps_only, duration, distance_duration, etc.: no measurable load
       return null;
   }
 }
@@ -260,7 +260,7 @@ export function sexFactor(sex) {
   return String(sex).toLowerCase().startsWith("f") ? 0.72 : 1;
 }
 
-/** Sur machine/poulie on charge plus : coeff plus haut => rang plus juste. */
+/** On machines/cables you can load more, so higher coeff => fairer rank. */
 function equipFactor(equipment) {
   switch (equipment) {
     case "machine":
@@ -276,9 +276,9 @@ function equipFactor(equipment) {
 }
 
 /**
- * Retourne { coeff, isolation } pour un exercice donne du groupe.
- * Si aucun mot-cle ne correspond, coeff par defaut ajuste selon l'equipement
- * et isolation = false (on suppose que le default cible plutot du compound).
+ * Returns { coeff, isolation } for a given exercise in the group.
+ * If no keyword matches, uses the default coefficient adjusted by equipment
+ * and isolation = false (we assume the default targets a compound lift).
  */
 function matchCoeff(title, groupKey, equipment) {
   const t = deburr(title);
@@ -294,8 +294,8 @@ function matchCoeff(title, groupKey, equipment) {
 }
 
 /**
- * Fraction du poids de corps effectivement soulevee sur un mouvement au poids
- * de corps sans charge (reps_only), pour pouvoir le noter quand meme.
+ * Fraction of bodyweight effectively lifted on a pure bodyweight movement
+ * (reps_only, no external load), so it can still be scored.
  */
 function bodyweightFraction(title, groupKey) {
   const t = deburr(title);
@@ -307,7 +307,7 @@ function bodyweightFraction(title, groupKey) {
   return 0.4;
 }
 
-/** equivalent reference 1RM/PdC -> index de tier (0..8). */
+/** Reference 1RM/BW equivalent -> tier index (0..8). */
 function ratioToTierIndex(ratio, thresholds, factor) {
   let idx = 0;
   for (let i = 0; i < thresholds.length; i++) {
@@ -317,7 +317,7 @@ function ratioToTierIndex(ratio, thresholds, factor) {
 }
 
 /**
- * Construit un index du catalogue d'exercices (par id et par titre normalise).
+ * Builds an index of the exercise catalog (by id and by normalized title).
  * @param {Array} templates - data/exercise-templates.json
  */
 export function buildCatalog(templates) {
@@ -332,8 +332,8 @@ export function buildCatalog(templates) {
 }
 
 /**
- * Aggrege les eqRatio en un score composite (moyenne ponderee des top N).
- * Si moins de N lifts, on n'utilise que les poids correspondants.
+ * Aggregates eqRatios into a composite score (weighted average of top N).
+ * If fewer than N lifts, only the corresponding weights are used.
  */
 function compositeRatio(lifts, weights = COMPOSITE_WEIGHTS) {
   const top = lifts.slice(0, weights.length);
@@ -349,23 +349,23 @@ function compositeRatio(lifts, weights = COMPOSITE_WEIGHTS) {
 }
 
 /**
- * Calcule le rang de chaque groupe musculaire.
+ * Computes the rank of each muscle group.
  *
  * @param {Array} sessions - [{ date, exercises:[{ title, templateId?, sets:[{weight,reps,type?}] }] }]
- * @param {object} catalog - resultat de buildCatalog()
+ * @param {object} catalog - result of buildCatalog()
  * @param {object} opts - { bodyweightKg, sex, minSessions }
- * @returns {object} resultat riche : voir la structure `groups[key]` ci-dessous
+ * @returns {object} rich result: see the `groups[key]` structure below
  *   groups[key] = {
  *     group, hasData, tierIndex, tier, next, progress,
- *     eqRatio,        // ratio composite retenu
- *     source,         // 'compound' | 'isolation' | null
- *     capped,         // true si le tier a ete plafonne (fallback isolation)
- *     lifts,          // tous les lifts du groupe (tries desc), avec isolation/sessions
- *     used,           // les lifts qui ont contribue au composite (top 3 compounds)
- *     excluded,       // lifts exclus + reason ('isolation' | 'few_sessions')
- *     best,           // le lift avec le eqRatio le plus haut parmi `used` (compat CLI)
+ *     eqRatio,        // composite ratio used
+ *     source,         // 'compound' | 'isolation' | 'few_sessions' | null
+ *     capped,         // true when the tier was capped by a fallback
+ *     lifts,          // all lifts of the group (sorted desc), with isolation/sessions
+ *     used,           // lifts that contributed to the composite (top 3 compounds)
+ *     excluded,       // excluded lifts + reason ('isolation' | 'few_sessions')
+ *     best,           // lift with the highest eqRatio among `used` (CLI compat)
  *   }
- *   unmatched : Set des titres d'exercices non reconnus (custom / cardio)
+ *   unmatched : Set of unrecognized exercise titles (custom / cardio)
  *   unmatchedDetails : Map(title -> {sessions, reason:'unknown'|'no_load'})
  */
 export function computeRanks(
@@ -377,7 +377,7 @@ export function computeRanks(
   const hasBw = Number.isFinite(bw) && bw > 0;
   const factor = sexFactor(sex);
 
-  // groupKey -> Map(title -> lift agrege). Un "lift" = meilleure serie sur cet exo.
+  // groupKey -> Map(title -> aggregated lift). A "lift" = best set on that exercise.
   const perGroup = {};
   for (const key of Object.keys(GROUPS)) perGroup[key] = new Map();
   const unmatchedTitles = new Set();
@@ -393,8 +393,8 @@ export function computeRanks(
       const rawTitle = ex.title ?? tpl?.title ?? "";
 
       const type = ex.type ?? tpl?.type ?? "weight_reps";
-      // Cardio, mobilite, etc. : on les ignore silencieusement (pas dans la
-      // section "non pris en compte" du dashboard qui vise l'halterophilie).
+      // Cardio, mobility, etc.: silently ignored (not surfaced in the
+      // dashboard's "not counted" section which is strength-only).
       const isStrength = STRENGTH_TYPES.has(type);
 
       if (!groupKey) {
@@ -446,8 +446,8 @@ export function computeRanks(
         }
       }
 
-      // Aucune serie exploitable : on signale UNIQUEMENT si le type est
-      // "musculation" (sinon = cardio/mobilite -> silencieux).
+      // No usable set: surface it ONLY if the type is a "strength" one
+      // (otherwise = cardio/mobility -> silent).
       if (!hadUsableSet) {
         if (rawTitle && isStrength) {
           const d = unmatchedDetails.get(rawTitle) ?? {
@@ -487,7 +487,7 @@ export function computeRanks(
 
   const groups = {};
   for (const [key, cfg] of Object.entries(GROUPS)) {
-    // Enrichit chaque lift avec eqRatio + sessionsCount, trie desc.
+    // Enrich each lift with eqRatio + sessionsCount, sorted desc.
     const allLifts = [...perGroup[key].values()]
       .map((l) => ({
         title: l.title,
@@ -502,7 +502,7 @@ export function computeRanks(
       }))
       .sort((a, b) => (b.eqRatio ?? 0) - (a.eqRatio ?? 0));
 
-    // Categorisation
+    // Categorization
     const enoughSessions = (l) => l.sessionsCount >= minSessions;
     const compounds = allLifts.filter((l) => !l.isolation && enoughSessions(l));
     const isolations = allLifts.filter((l) => l.isolation && enoughSessions(l));
@@ -515,13 +515,13 @@ export function computeRanks(
       used = compounds.slice(0, COMPOSITE_WEIGHTS.length);
       source = "compound";
     } else if (isolations.length > 0) {
-      // Aucun compound qualifie : on retombe sur les isolations (cap Titan).
+      // No qualifying compound: fall back to isolation lifts (cap Titan).
       used = isolations.slice(0, COMPOSITE_WEIGHTS.length);
       source = "isolation";
       cap = ISOLATION_TIER_CAP;
     } else if (allLifts.length > 0) {
-      // Aucun exo n'atteint MIN_SESSIONS : on prend ce qu'on a (cap Platinum),
-      // pour ne pas laisser le groupe vide alors qu'il y a des donnees.
+      // No exercise reaches MIN_SESSIONS: use whatever we have (cap Platinum),
+      // so the group isn't shown as empty when there's actually data.
       used = allLifts.slice(0, COMPOSITE_WEIGHTS.length);
       source = "few_sessions";
       cap = FEW_SESSIONS_TIER_CAP;
@@ -530,7 +530,7 @@ export function computeRanks(
     const eqRatio = used.length ? compositeRatio(used) : null;
     const capped = cap != null;
 
-    // Tout ce qui n'a pas ete retenu : on l'expose avec une raison.
+    // Everything that wasn't used: surface it with a reason.
     const usedTitles = new Set(used.map((l) => l.title));
     const excluded = allLifts
       .filter((l) => !usedTitles.has(l.title))

@@ -4,6 +4,16 @@ All notable changes to Hevy Ranks are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] — 2026-07-12
+
+### Changed
+
+- **README:** header now displays all 9 rank emblems (Bronze → Mythic)
+  instead of a subset of 5.
+- **README:** Roadmap section reorganized into a proper TODO with
+  Done / Planned / Ideas / Ongoing buckets, so contributors and users
+  can see what's next at a glance.
+
 ## [0.2.1] — 2026-07-12
 
 ### Fixed

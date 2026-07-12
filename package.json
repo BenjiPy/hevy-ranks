@@ -1,7 +1,7 @@
 {
   "name": "hevy-ranks",
-  "version": "0.2.1",
-  "description": "Gamifie tes seances Hevy en rangs de force par groupe musculaire (web + CLI). Open-source, non lucratif.",
+  "version": "0.2.2",
+  "description": "Turn your Hevy workouts into a strength rank per muscle group (web + CLI). Open-source, non-profit.",
   "type": "module",
   "bin": {
     "hevy-ranks": "src/index.js"

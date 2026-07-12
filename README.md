@@ -3,11 +3,15 @@
 > Turn your **Hevy** workout history into a **strength rank per muscle group** — from **Bronze** all the way up to the legendary **Mythic**.
 
 <p align="center">
-  <img src="assets/ranks/rank-01-bronze.png" width="80" alt="Bronze" />
-  <img src="assets/ranks/rank-03-gold.png" width="80" alt="Gold" />
-  <img src="assets/ranks/rank-05-diamond.png" width="80" alt="Diamond" />
-  <img src="assets/ranks/rank-07-colossus.png" width="80" alt="Colossus" />
-  <img src="assets/ranks/rank-09-mythic.png" width="80" alt="Mythic" />
+  <img src="assets/ranks/rank-01-bronze.png" width="64" alt="Bronze" title="Bronze" />
+  <img src="assets/ranks/rank-02-iron.png" width="64" alt="Iron" title="Iron" />
+  <img src="assets/ranks/rank-03-gold.png" width="64" alt="Gold" title="Gold" />
+  <img src="assets/ranks/rank-04-platinum.png" width="64" alt="Platinum" title="Platinum" />
+  <img src="assets/ranks/rank-05-diamond.png" width="64" alt="Diamond" title="Diamond" />
+  <img src="assets/ranks/rank-06-titan.png" width="64" alt="Titan" title="Titan" />
+  <img src="assets/ranks/rank-07-colossus.png" width="64" alt="Colossus" title="Colossus" />
+  <img src="assets/ranks/rank-08-olympian.png" width="64" alt="Olympian" title="Olympian" />
+  <img src="assets/ranks/rank-09-mythic.png" width="64" alt="Mythic" title="Mythic" />
 </p>
 
 <p align="center">
@@ -182,14 +186,45 @@ scripts/
 - If a group has **no compound lift with ≥ 3 sessions**, its rank falls back to your isolation lifts and is **capped at Titan**.
 - Per-**individual-muscle** ranking (instead of per group) is planned.
 
-## Roadmap
+## Roadmap / TODO
 
-- Sub-tiers inside each rank (Gold I / II / III) for finer progression tracking.
-- Actionable recommendations ("do X to reach the next tier").
-- Hover-based rank legend directly on the dashboard.
-- Precise per-muscle rank (opt-in), alongside the per-group rank.
-- True percentiles against other users (would require an opt-in backend).
-- Bodyweight-reps score for calisthenics.
+The project is actively evolving based on community feedback (r/Hevy).
+Ticked items are already available, unticked ones are planned for a future
+release. Suggestions welcome — open an issue.
+
+### Done
+
+- [x] **v0.1** — First public release: Bronze → Mythic per muscle group,
+      single best lift, CSV + API modes.
+- [x] **v0.2** — Composite of top 3 compound lifts, isolation guard capped
+      at Titan, minimum 3 sessions per exercise, top-tier thresholds spread
+      out, per-group accordion detail, "Exercises not counted" section,
+      versioned footer + changelog.
+
+### Planned (next up)
+
+- [ ] **Sub-tiers inside each rank** (Gold I / II / III) for finer
+      progression tracking.
+- [ ] **Actionable recommendations** on the dashboard — "do X on squat to
+      reach the next tier for Legs".
+- [ ] **Interactive rank legend** (hover on emblems) so users don't have
+      to leave the dashboard to understand what a rank means.
+- [ ] **Data-privacy section visible on the dashboard** (not just in the
+      README) — everything runs locally, nothing is sent anywhere.
+
+### Ideas / longer-term
+
+- [ ] **Per-individual-muscle rank** (opt-in), alongside the per-group rank.
+- [ ] **True percentiles against other users** — would require an opt-in
+      backend, currently under thought.
+- [ ] **Bodyweight-reps score** for calisthenics-heavy training.
+- [ ] **Progression graph over time** per muscle group.
+- [ ] **Export / share your ranks** (image card, link, etc.).
+
+### Ongoing
+
+- [ ] Keep tuning coefficients and thresholds as more feedback comes in.
+- [ ] Expand the exercise catalog (custom names, less common variants).
 
 ## Links
 
