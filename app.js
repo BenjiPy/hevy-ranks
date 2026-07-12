@@ -270,7 +270,9 @@ const csvFile = document.getElementById("csvFile");
 const dzText = document.getElementById("dzText");
 let csvText = null;
 
-dropzone.addEventListener("click", () => csvFile.click());
+/* No JS relay to csvFile.click(): the wrapping <label for="csvFile">
+   already opens the picker natively. Doing both breaks iOS Safari
+   (the second click cancels the file selection of the first). */
 csvFile.addEventListener("change", () => {
   if (csvFile.files[0]) readCsv(csvFile.files[0]);
 });
@@ -297,6 +299,13 @@ function readCsv(file) {
     csvText = reader.result;
     dzText.textContent = `✓ ${file.name}`;
     dropzone.classList.add("loaded");
+  };
+  reader.onerror = () => {
+    csvText = null;
+    dropzone.classList.remove("loaded");
+    showToast(
+      "Couldn't read that file. On iOS, make sure it's downloaded from iCloud first."
+    );
   };
   reader.readAsText(file);
 }

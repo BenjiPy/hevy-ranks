@@ -134,8 +134,13 @@
           nothing is sent to any server.
         </p>
 
-        <label class="dropzone" id="dropzone">
-          <input type="file" id="csvFile" accept=".csv" hidden />
+        <label class="dropzone" id="dropzone" for="csvFile">
+          <input
+            type="file"
+            id="csvFile"
+            class="visually-hidden-file"
+            accept=".csv,text/csv,text/plain,application/vnd.ms-excel"
+          />
           <span class="dz-icon">⬆</span>
           <span class="dz-text" id="dzText">Choose a CSV file or drag &amp; drop</span>
         </label>
