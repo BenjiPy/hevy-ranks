@@ -14,7 +14,7 @@ const VIEW_KEY = "hevy_view";
 const nf = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
 const fmt = (n) => nf.format(n);
 
-/* English display names (engine keeps French labels for the CLI). */
+/* Display names used in the web UI (kept separate from engine labels). */
 const LABELS_EN = {
   legs: "Legs",
   chest: "Chest",
@@ -112,7 +112,7 @@ enhanceSelects();
 restoreResults();
 loadAppVersion();
 
-/* Fetch la version depuis package.json (source unique de verite). */
+/* Fetch the version from package.json (single source of truth). */
 function loadAppVersion() {
   const el = document.getElementById("appVersion");
   if (!el) return;
@@ -419,7 +419,7 @@ function liftsTable(lifts, { showReason = false } = {}) {
 function groupItem(g) {
   const label = LABELS_EN[g.group.key];
   if (!g.hasData) {
-    // Groupe sans donnee exploitable : header non-cliquable
+    // Group with no usable data: non-clickable header
     const excludedNote = g.excluded.length
       ? ` · ${g.excluded.length} lift(s) skipped (see below)`
       : "";

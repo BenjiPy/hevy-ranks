@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * Regenere data/exercise-templates.json depuis l'API Hevy.
- * Ce catalogue (titre <-> groupe musculaire) permet au site de fonctionner
- * en mode CSV (sans cle API) et de mapper les exercices cote client.
+ * Regenerate data/exercise-templates.json from the Hevy API.
+ * This catalog (title <-> muscle group) lets the site work in CSV mode
+ * (no API key) and map exercises on the client side.
  *
- * Usage : HEVY_API_KEY=... node scripts/refresh-catalog.js
+ * Usage: HEVY_API_KEY=... node scripts/refresh-catalog.js
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -18,7 +18,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 async function main() {
   const key = process.env.HEVY_API_KEY?.trim();
   if (!key) {
-    console.error("HEVY_API_KEY manquant (dans .env).");
+    console.error("HEVY_API_KEY missing (in .env).");
     process.exit(1);
   }
   const client = new HevyClient(key);
@@ -36,10 +36,10 @@ async function main() {
   const out = join(__dirname, "..", "data", "exercise-templates.json");
   mkdirSync(join(__dirname, "..", "data"), { recursive: true });
   writeFileSync(out, JSON.stringify(arr));
-  console.log(`\n${arr.length} exercices ecrits dans data/exercise-templates.json`);
+  console.log(`\n${arr.length} exercises written to data/exercise-templates.json`);
 }
 
 main().catch((e) => {
-  console.error("\nErreur :", e.message);
+  console.error("\nError:", e.message);
   process.exit(1);
 });
