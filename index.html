@@ -134,16 +134,17 @@
           nothing is sent to any server.
         </p>
 
-        <label class="dropzone" id="dropzone" for="csvFile">
+        <div class="dropzone" id="dropzone">
+          <span class="dz-icon" aria-hidden="true">⬆</span>
+          <span class="dz-text" id="dzText">Choose a CSV file or drag &amp; drop</span>
           <input
             type="file"
             id="csvFile"
-            class="visually-hidden-file"
+            class="dz-input"
             accept=".csv,text/csv,text/plain,application/vnd.ms-excel"
+            aria-label="Choose a CSV file"
           />
-          <span class="dz-icon">⬆</span>
-          <span class="dz-text" id="dzText">Choose a CSV file or drag &amp; drop</span>
-        </label>
+        </div>
 
         <div class="field-row">
           <label class="field">

@@ -270,9 +270,9 @@ const csvFile = document.getElementById("csvFile");
 const dzText = document.getElementById("dzText");
 let csvText = null;
 
-/* No JS relay to csvFile.click(): the wrapping <label for="csvFile">
-   already opens the picker natively. Doing both breaks iOS Safari
-   (the second click cancels the file selection of the first). */
+/* The file input overlays the whole dropzone (opacity:0). No <label>,
+   no JS click relay, no clip-path — this is the only pattern where
+   iOS Safari reliably fires `change` after the picker returns. */
 csvFile.addEventListener("change", () => {
   if (csvFile.files[0]) readCsv(csvFile.files[0]);
 });
