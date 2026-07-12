@@ -274,8 +274,48 @@ let csvText = null;
    no JS click relay, no clip-path — this is the only pattern where
    iOS Safari reliably fires `change` after the picker returns. */
 csvFile.addEventListener("change", () => {
-  if (csvFile.files[0]) readCsv(csvFile.files[0]);
+  if (csvFile.files[0]) acceptFile(csvFile.files[0]);
 });
+
+/* Hard cap for CSV imports (safety net; a real Hevy export is a few MB max).
+   Anything bigger is almost certainly not a Hevy CSV. */
+const MAX_CSV_BYTES = 20 * 1024 * 1024; // 20 MB
+const CSV_MIME_ALLOW = new Set([
+  "text/csv",
+  "text/plain",
+  "application/csv",
+  "application/vnd.ms-excel",
+  "application/octet-stream", // iOS often reports this for .csv from Files
+  "", // some pickers report no MIME at all
+]);
+
+/* Client-side validation of the picked file. `accept=` on the input is
+   only a UX hint (spec allows the picker to ignore it), so we re-check
+   here before doing anything. Rejects bin/img/pdf/etc. with a clear
+   message instead of failing silently downstream. */
+function acceptFile(file) {
+  const name = (file.name || "").toLowerCase();
+  const looksCsvByName = name.endsWith(".csv") || name.endsWith(".txt");
+  const looksCsvByMime = CSV_MIME_ALLOW.has(file.type || "");
+
+  if (!looksCsvByName && !looksCsvByMime) {
+    csvFile.value = "";
+    return showToast(
+      `"${file.name}" doesn't look like a CSV. Export your Hevy data as CSV first.`
+    );
+  }
+  if (file.size > MAX_CSV_BYTES) {
+    csvFile.value = "";
+    return showToast(
+      `File too big (${(file.size / 1024 / 1024).toFixed(1)} MB). Hevy exports are usually under 20 MB.`
+    );
+  }
+  if (file.size === 0) {
+    csvFile.value = "";
+    return showToast("That file is empty.");
+  }
+  readCsv(file);
+}
 ["dragover", "dragenter"].forEach((ev) =>
   dropzone.addEventListener(ev, (e) => {
     e.preventDefault();
@@ -290,7 +330,7 @@ csvFile.addEventListener("change", () => {
 );
 dropzone.addEventListener("drop", (e) => {
   const f = e.dataTransfer.files[0];
-  if (f) readCsv(f);
+  if (f) acceptFile(f);
 });
 
 function readCsv(file) {
@@ -612,6 +652,113 @@ function render(result, meta) {
 
   persistResults();
   show("results");
+
+  const topColor =
+    withData.length
+      ? withData.reduce((a, b) => (b.tierIndex > a.tierIndex ? b : a)).tier.color
+      : null;
+  fireConfetti(topColor);
+}
+
+/* ---------------- Confetti burst (results reveal) ---------------- */
+/* Small canvas particle system, zero dependency. Fires once per render()
+   call, skipped on restore-from-storage and on prefers-reduced-motion. */
+function fireConfetti(accent) {
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+  const canvas = document.getElementById("confetti");
+  if (!canvas) return;
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const resize = () => {
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    canvas.style.width = window.innerWidth + "px";
+    canvas.style.height = window.innerHeight + "px";
+  };
+  resize();
+  window.addEventListener("resize", resize, { once: true });
+  canvas.classList.add("on");
+
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width;
+  const H = canvas.height;
+
+  const palette = [
+    accent || "#6c8cff",
+    ...RANK_TIERS.map((t) => t.color),
+  ];
+
+  const count = Math.min(
+    220,
+    Math.max(120, Math.round((window.innerWidth * window.innerHeight) / 9000))
+  );
+  const particles = [];
+  const gravity = 0.35 * dpr;
+  const drag = 0.992;
+
+  const rand = (a, b) => a + Math.random() * (b - a);
+
+  const spawn = (originX) => {
+    for (let i = 0; i < count / 2; i++) {
+      const angle = rand(-Math.PI, 0) + rand(-0.3, 0.3);
+      const speed = rand(9, 18) * dpr;
+      particles.push({
+        x: originX,
+        y: H * 0.72,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - rand(2, 6) * dpr,
+        w: rand(6, 12) * dpr,
+        h: rand(8, 16) * dpr,
+        color: palette[Math.floor(Math.random() * palette.length)],
+        rot: rand(0, Math.PI * 2),
+        vr: rand(-0.25, 0.25),
+        life: rand(90, 160),
+        shape: Math.random() < 0.5 ? "rect" : "circle",
+      });
+    }
+  };
+  spawn(W * 0.2);
+  spawn(W * 0.8);
+
+  let frames = 0;
+  const maxFrames = 260;
+  let raf;
+
+  const step = () => {
+    frames++;
+    ctx.clearRect(0, 0, W, H);
+    for (const p of particles) {
+      p.vx *= drag;
+      p.vy = p.vy * drag + gravity;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.rot += p.vr;
+      p.life--;
+
+      const alpha = Math.max(0, Math.min(1, p.life / 60));
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.color;
+      if (p.shape === "rect") {
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      } else {
+        ctx.beginPath();
+        ctx.arc(0, 0, p.w / 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+    if (frames < maxFrames && particles.some((p) => p.life > 0 && p.y < H + 40)) {
+      raf = requestAnimationFrame(step);
+    } else {
+      cancelAnimationFrame(raf);
+      ctx.clearRect(0, 0, W, H);
+      canvas.classList.remove("on");
+    }
+  };
+  raf = requestAnimationFrame(step);
 }
 
 /* ---------------- Persist results (survive navigation & reload) ---------------- */
