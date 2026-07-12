@@ -60,6 +60,36 @@ export class HevyClient {
     return workouts;
   }
 
+  /**
+   * Recupere le poids de corps le plus recent depuis les mensurations Hevy.
+   * GET /v1/body_measurements (paginé, max 10/page). Renvoie un nombre (kg)
+   * ou null si aucune mesure de poids n'est trouvee.
+   */
+  async getLatestBodyweight() {
+    let best = null; // { date, weight }
+    const first = await this.#get("/v1/body_measurements", {
+      page: 1,
+      pageSize: 10,
+    });
+    const pageCount = first.page_count ?? 1;
+    const consider = (entry) => {
+      const w = entry?.weight_kg;
+      if (typeof w !== "number" || !Number.isFinite(w) || w <= 0) return;
+      const date = entry.date ?? "";
+      if (!best || date > best.date) best = { date, weight: w };
+    };
+    for (const e of first.body_measurements ?? []) consider(e);
+
+    for (let page = 2; page <= pageCount; page++) {
+      const data = await this.#get("/v1/body_measurements", {
+        page,
+        pageSize: 10,
+      });
+      for (const e of data.body_measurements ?? []) consider(e);
+    }
+    return best?.weight ?? null;
+  }
+
   /** Recupere TOUS les modeles d'exercices (max 100/page) -> map id -> template. */
   async getExerciseTemplateMap({ onProgress } = {}) {
     const map = new Map();

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Hevy Ranks">
+  <rect width="64" height="64" rx="15" fill="#6c8cff" />
+  <g fill="#0a0b0d">
+    <rect x="26" y="29.5" width="12" height="5" rx="2.5" />
+    <rect x="20" y="23" width="6" height="18" rx="2.5" />
+    <rect x="38" y="23" width="6" height="18" rx="2.5" />
+    <rect x="13" y="26" width="5" height="12" rx="2.5" />
+    <rect x="46" y="26" width="5" height="12" rx="2.5" />
+  </g>
+</svg>

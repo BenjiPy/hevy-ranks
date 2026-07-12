@@ -1,82 +1,88 @@
 #!/usr/bin/env node
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { loadEnv } from "./env.js";
 import { HevyClient } from "./hevy.js";
-import {
-  computeMuscleStats,
-  volumeToRank,
-  LEG_MUSCLES,
-  RANKS,
-} from "./rank.js";
+import { buildCatalog, workoutsToSessions, computeRanks } from "./engine.js";
 
 loadEnv();
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const nf = new Intl.NumberFormat("fr-FR");
-const fmt = (n) => nf.format(Math.round(n));
+const nf = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 });
+const fmt = (n) => nf.format(n);
 
-function bar(progress, width = 24) {
+function bar(progress, width = 20) {
   const filled = Math.round(progress * width);
   return "[" + "#".repeat(filled) + "-".repeat(width - filled) + "]";
+}
+
+async function resolveBodyweight(client) {
+  try {
+    const w = await client.getLatestBodyweight();
+    if (w) return { value: w, source: "API Hevy" };
+  } catch {
+    /* repli .env */
+  }
+  const env = Number(process.env.BODYWEIGHT_KG);
+  if (Number.isFinite(env) && env > 0) return { value: env, source: ".env" };
+  return { value: null, source: null };
 }
 
 async function main() {
   const apiKey = process.env.HEVY_API_KEY;
   if (!apiKey || apiKey.trim() === "") {
     console.error(
-      "\n[X] Cle API manquante.\n" +
-        "    Renseigne HEVY_API_KEY dans le fichier .env\n" +
-        "    (genere ta cle sur https://hevy.com/settings?developer, Hevy Pro requis)\n"
+      "\n[X] Cle API manquante. Renseigne HEVY_API_KEY dans .env\n" +
+        "    (https://hevy.com/settings?developer, Hevy Pro requis)\n"
     );
     process.exit(1);
   }
 
+  const sex = process.env.SEX ?? "male";
   const client = new HevyClient(apiKey.trim());
 
-  console.log("\n== Hevy Ranks -- Rang des JAMBES ==\n");
+  console.log("\n== Hevy Ranks -- Rang par groupe musculaire ==\n");
 
-  process.stdout.write("Chargement des modeles d'exercices... ");
-  const templateMap = await client.getExerciseTemplateMap();
-  console.log(`${templateMap.size} exercices.`);
+  const bw = await resolveBodyweight(client);
+  if (!bw.value) {
+    console.error(
+      "[X] Poids de corps introuvable. Renseigne BODYWEIGHT_KG dans .env\n"
+    );
+    process.exit(1);
+  }
+  console.log(`Poids de corps : ${fmt(bw.value)} kg (source: ${bw.source})`);
+
+  const templates = JSON.parse(
+    readFileSync(join(__dirname, "..", "data", "exercise-templates.json"), "utf8")
+  );
+  const catalog = buildCatalog(templates);
 
   const count = await client.getWorkoutCount();
-  process.stdout.write(`Chargement des seances (${count} au total)`);
+  process.stdout.write(`Chargement de ${count} seances...`);
   const workouts = await client.getAllWorkouts({
-    onProgress: (p, total) => process.stdout.write(`\rChargement des seances... page ${p}/${total}   `),
+    onProgress: (p, t) =>
+      process.stdout.write(`\rChargement des seances... ${p}/${t}   `),
   });
   console.log(`\rSeances chargees : ${workouts.length}${" ".repeat(20)}`);
 
-  const stats = computeMuscleStats(workouts, templateMap, LEG_MUSCLES);
-  const { rank, next, progress, remaining } = volumeToRank(stats.totalVolume);
+  const sessions = workoutsToSessions(workouts);
+  const result = computeRanks(sessions, catalog, { bodyweightKg: bw.value, sex });
 
-  console.log("\n---------------------------------------------");
-  console.log(`  RANG JAMBES :  ${rank.toUpperCase()}`);
-  console.log("---------------------------------------------");
-  console.log(`  Volume cumule   : ${fmt(stats.totalVolume)} kg`);
-  console.log(`  Seances jambes  : ${stats.sessionCount}`);
-  console.log(`  Sets comptes    : ${stats.totalSets}  |  Reps : ${fmt(stats.totalReps)}`);
-  console.log(`  Charge max/set  : ${fmt(stats.heaviestSet)} kg`);
-  console.log(`  Meilleure seance: ${fmt(stats.bestVolumeSession)} kg de volume`);
-
-  console.log("\n  Progression :");
-  if (next) {
-    console.log(`  ${bar(progress)} ${Math.round(progress * 100)}%`);
-    console.log(`  Vers ${next} : encore ${fmt(remaining)} kg`);
-  } else {
-    console.log(`  ${bar(1)} 100%  -- rang maximum atteint !`);
-  }
-
-  if (stats.topExercises.length) {
-    console.log("\n  Top exercices (par volume) :");
-    for (const [i, e] of stats.topExercises.entries()) {
-      console.log(`   ${i + 1}. ${e.title} - ${fmt(e.volume)} kg`);
+  console.log("\n=====================================================");
+  for (const g of Object.values(result.groups)) {
+    const name = g.group.label.padEnd(11);
+    if (!g.hasData) {
+      console.log(`  ${name} : -- (aucune donnee chargee)`);
+      continue;
     }
+    const tierName = `${g.tier.name}`.padEnd(9);
+    const detail =
+      `${g.best.title} ${fmt(g.best.load)}kg x${g.best.reps} ` +
+      `-> 1RM ${fmt(g.best.best1RM)}kg (${fmt(g.best.eqRatio)}x PdC)`;
+    console.log(`  ${name} : ${tierName} ${bar(g.progress)}  ${detail}`);
   }
-
-  console.log("\n  Paliers de rang (volume cumule en kg) :");
-  for (const r of RANKS) {
-    const marker = r.name === rank ? " <= toi" : "";
-    console.log(`   - ${r.name.padEnd(9)} >= ${fmt(r.min).padStart(11)} kg${marker}`);
-  }
-  console.log("");
+  console.log("=====================================================\n");
 }
 
 main().catch((err) => {

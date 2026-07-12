@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hevy Ranks — Turn your workouts into strength ranks</title>
+    <meta
+      name="description"
+      content="Turn your Hevy workouts into a strength rank per muscle group. Open-source, non-profit."
+    />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="bg-glow"></div>
+
+    <header class="site-header">
+      <button class="brand" data-goto="landing">
+        <span class="brand-mark">HR</span>
+        <span class="brand-name">Hevy<span class="accent">Ranks</span></span>
+      </button>
+      <nav class="header-links">
+        <button class="navlink" data-goto="ranks">How it works</button>
+        <a href="https://github.com" target="_blank" rel="noopener" class="navlink">GitHub</a>
+        <span class="badge-oss">Open-source</span>
+      </nav>
+    </header>
+
+    <!-- ======================= LANDING ======================= -->
+    <main id="landing" class="view">
+      <section class="hero">
+        <p class="eyebrow">Unofficial · non-profit · powered by the Hevy API</p>
+        <h1>Turn your workouts into <span class="accent">strength ranks</span>.</h1>
+        <p class="subtitle">
+          Connect your Hevy data and get a rank for every muscle group — from
+          <strong>Chest</strong> to <strong>Legs</strong>. Based on your
+          <strong>actual performance</strong> (estimated 1RM relative to
+          bodyweight), not on time spent.
+        </p>
+
+        <div class="rank-strip" id="rankStrip" aria-hidden="true"></div>
+
+        <div class="cta-row">
+          <button class="btn btn-primary" data-goto="setup-api">
+            Connect with API key
+          </button>
+          <button class="btn btn-ghost" data-goto="setup-csv">
+            Import a CSV file
+          </button>
+        </div>
+        <p class="hint">
+          No Pro account? Use the Hevy CSV export — no key required.
+          <button data-goto="ranks">See how ranks are calculated →</button>
+        </p>
+      </section>
+    </main>
+
+    <!-- ======================= SETUP : API ======================= -->
+    <section id="setup-api" class="view hidden">
+      <div class="panel">
+        <button class="back" data-goto="landing">← Back</button>
+        <h2>Connect with API key</h2>
+        <p class="panel-sub">
+          Your key stays in your browser and is only sent to Hevy. Generate it at
+          <a href="https://hevy.com/settings?developer" target="_blank" rel="noopener"
+            >hevy.com/settings?developer</a
+          >
+          (Hevy Pro subscription required).
+        </p>
+
+        <label class="field">
+          <span>Hevy API key</span>
+          <input
+            type="password"
+            id="apiKey"
+            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            autocomplete="off"
+          />
+        </label>
+
+        <div class="field-row">
+          <label class="field">
+            <span>Bodyweight (kg) <em>optional</em></span>
+            <input type="number" id="bwApi" placeholder="auto from Hevy" min="20" max="300" />
+          </label>
+          <label class="field">
+            <span>Standards</span>
+            <select id="sexApi">
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="checkbox">
+          <input type="checkbox" id="remember" />
+          <span>Remember my key on this device</span>
+        </label>
+
+        <button class="btn btn-primary full" id="runApi">Calculate my ranks</button>
+        <p class="cors-note">
+          Tip: if the browser blocks the request (CORS), use CSV mode instead.
+        </p>
+      </div>
+    </section>
+
+    <!-- ======================= SETUP : CSV ======================= -->
+    <section id="setup-csv" class="view hidden">
+      <div class="panel">
+        <button class="back" data-goto="landing">← Back</button>
+        <h2>Import a CSV file</h2>
+        <p class="panel-sub">
+          In the Hevy app: <strong>Profile → Settings → Export Data</strong>. Drop
+          the <code>workouts.csv</code> file here. Everything is processed locally —
+          nothing is sent to any server.
+        </p>
+
+        <label class="dropzone" id="dropzone">
+          <input type="file" id="csvFile" accept=".csv" hidden />
+          <span class="dz-icon">⬆</span>
+          <span class="dz-text" id="dzText">Choose a CSV file or drag &amp; drop</span>
+        </label>
+
+        <div class="field-row">
+          <label class="field">
+            <span>Bodyweight (kg)</span>
+            <input type="number" id="bwCsv" placeholder="e.g. 75" min="20" max="300" />
+          </label>
+          <label class="field">
+            <span>Standards</span>
+            <select id="sexCsv">
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+          </label>
+        </div>
+
+        <button class="btn btn-primary full" id="runCsv">Calculate my ranks</button>
+      </div>
+    </section>
+
+    <!-- ======================= LOADING ======================= -->
+    <section id="loading" class="view hidden">
+      <div class="loader">
+        <div class="spinner"></div>
+        <p id="loadingText">Loading…</p>
+      </div>
+    </section>
+
+    <!-- ======================= RESULTS ======================= -->
+    <section id="results" class="view hidden">
+      <div class="results-head">
+        <button class="back" data-goto="landing">← New calculation</button>
+        <div class="results-meta" id="resultsMeta"></div>
+      </div>
+
+      <div class="overview">
+        <div class="radar-wrap" id="radarWrap"></div>
+        <div class="best" id="best"></div>
+      </div>
+
+      <div class="section-title">Rank by muscle group</div>
+      <div class="groups" id="groups"></div>
+
+      <p class="disclaimer" id="disclaimer"></p>
+      <div class="results-foot">
+        <button class="btn btn-ghost" data-goto="ranks">How is this calculated?</button>
+      </div>
+    </section>
+
+    <!-- ======================= HOW IT WORKS ======================= -->
+    <section id="ranks" class="view hidden">
+      <div class="doc">
+        <div class="doc-head">
+          <button class="back" data-goto="landing">← Home</button>
+          <h1>How ranks are calculated</h1>
+          <p>
+            Every muscle group gets one of nine ranks, based on your best
+            performance — not on how much you train. Here is the exact method.
+          </p>
+        </div>
+
+        <div class="tier-grid" id="tierGrid"></div>
+
+        <h2>The method</h2>
+        <p>Each set you log is turned into a comparable strength score.</p>
+        <ol class="steps">
+          <li>
+            <div>
+              <b>Estimate a 1RM for every set.</b>
+              <span
+                >Your best set on each exercise is converted to an estimated
+                one-rep max using the Epley formula (reps are capped at 12 to stay
+                realistic).</span
+              >
+            </div>
+          </li>
+          <li>
+            <div>
+              <b>Resolve the real load.</b>
+              <span
+                >Bodyweight movements add your bodyweight (e.g. weighted dips),
+                assisted machines subtract the assistance, and pure bodyweight
+                reps (abs, push-ups, pull-ups) use an estimated fraction of your
+                bodyweight so they still count.</span
+              >
+            </div>
+          </li>
+          <li>
+            <div>
+              <b>Normalize to a reference lift.</b>
+              <span
+                >Each exercise has a coefficient relative to the group's reference
+                lift. Machines and cables (where you can load far more) get higher
+                coefficients so they don't inflate your rank.</span
+              >
+            </div>
+          </li>
+          <li>
+            <div>
+              <b>Divide by bodyweight.</b>
+              <span
+                >Strength is measured relative to your bodyweight, pulled from
+                Hevy's measurements (or entered manually). Female standards apply a
+                ~0.72 scaling factor.</span
+              >
+            </div>
+          </li>
+          <li>
+            <div>
+              <b>Match to a rank.</b>
+              <span
+                >The resulting ratio is compared to nine thresholds per muscle
+                group. Your rank for a group is your single best exercise — a big
+                lift on day one ranks you up immediately.</span
+              >
+            </div>
+          </li>
+        </ol>
+
+        <div class="formula">
+          <code>estimated 1RM = weight × (1 + reps / 30)</code>
+          <div class="fnote">
+            Epley formula. Then: <code>ratio = 1RM ÷ coefficient ÷ bodyweight</code>,
+            compared to the thresholds below.
+          </div>
+        </div>
+
+        <h2>Thresholds per muscle group</h2>
+        <p>
+          Minimum equivalent <em>reference-lift 1RM ÷ bodyweight</em> to reach each
+          rank (male standards; multiply by ~0.72 for female).
+        </p>
+        <div class="table-wrap">
+          <table class="thresholds" id="thresholdTable"></table>
+        </div>
+
+        <h2>Good to know</h2>
+        <ul class="notes">
+          <li>
+            <b>One rank per muscle group</b> today (Legs, Chest, Back, Shoulders,
+            Arms, Core). Per-individual-muscle ranks are planned.
+          </li>
+          <li>
+            <b>Your data never leaves your device</b> — the API key talks directly
+            to Hevy, and CSV files are parsed locally in your browser.
+          </li>
+          <li>
+            <b>Ranks are estimates.</b> Coefficients and thresholds are tunable and
+            will keep improving. This project is not affiliated with Hevy.
+          </li>
+        </ul>
+
+        <div class="doc-cta">
+          <button class="btn btn-primary" data-goto="setup-api">Calculate my ranks</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <footer class="site-footer">
+      <p>
+        Hevy Ranks — open-source, non-profit. Not affiliated with Hevy. Ranks are
+        estimates (Epley 1RM, tunable strength standards).
+      </p>
+    </footer>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

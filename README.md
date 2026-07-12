@@ -1,156 +1,174 @@
 # Hevy Ranks
 
-POC local qui récupère tes séances de musculation depuis **Hevy** via son API officielle,
-et transforme ton historique en un **rang gamifié**. Ici, le premier exemple calcule le
-**rang des jambes**.
+Gamifie tes séances **Hevy** : transforme ton historique en un **rang de force par
+groupe musculaire** (Jambes, Pectoraux, Dos, Épaules, Bras, Abdos), du rang **Bronze**
+jusqu'au rang légendaire **Mythic**.
 
-Zéro dépendance externe : uniquement Node.js (le `fetch` natif et un mini parseur `.env` maison).
+- **Basé sur la performance réelle** (1RM estimé relatif au poids de corps), pas sur le
+  volume cumulé : un gros lift dès la 1ʳᵉ séance = rang élevé immédiatement.
+- **Deux modes** : clé API Hevy (Pro) **ou** import du CSV d'export (sans clé, sans Pro).
+- **Site statique** compatible **GitHub Pages** — tout est calculé dans le navigateur,
+  aucune donnée envoyée sur un serveur.
+- **Zéro dépendance** (JS natif, `fetch`, modules ES). Projet open-source, non lucratif.
+
+> Non affilié à Hevy. Les rangs sont des **estimations** avec des standards ajustables.
 
 ---
 
-## Prérequis
+## Aperçu
 
-- **Node.js >= 18** (testé sur Node 20).
-- Un **abonnement Hevy Pro** (l'API n'est ouverte qu'aux comptes Pro).
-- Une **clé API** générée sur https://hevy.com/settings?developer
+- `index.html` — page graphique : landing, choix du mode, dashboard des rangs.
+- 9 emblèmes de rang générés par IA dans `assets/ranks/` (haltère centrale, progression Bronze abîmé → Mythic légendaire, 256 px).
+- Moteur de calcul partagé (`src/engine.js`) utilisé par le **site** et le **CLI**.
 
-## Installation
+Les 9 rangs : **Bronze · Iron · Gold · Platinum · Diamond · Titan · Colossus · Olympian · Mythic**.
 
-```bash
-# 1. Copie le fichier d'exemple (ou édite directement .env)
-cp .env.example .env
+---
 
-# 2. Colle ta clé dans .env :
-#    HEVY_API_KEY=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-```
+## Utilisation (site web)
 
-## Utilisation
+### En local
 
 ```bash
-node src/index.js
-# ou
-npm run legs
+npm run web       # sert le dossier sur http://localhost:8765
+# (équivaut à : python -m http.server 8765)
 ```
 
-Exemple de sortie :
+Ouvre `http://localhost:8765`, puis choisis :
 
+- **Connexion par clé API** — colle ta clé Hevy (générée sur
+  [hevy.com/settings?developer](https://hevy.com/settings?developer), Pro requis).
+  Le poids de corps est récupéré automatiquement depuis Hevy (ou saisi à la main).
+- **Import CSV** — dépose ton `workouts.csv` (Hevy → Réglages → Exporter les données)
+  et renseigne ton poids de corps. Aucune clé, aucun compte Pro nécessaire.
+
+> ⚠️ **CORS** : selon la configuration de l'API Hevy, le navigateur peut bloquer les
+> appels directs en mode clé API. Le mode **CSV** fonctionne toujours et est recommandé
+> pour un déploiement public (GitHub Pages).
+
+### Déploiement GitHub Pages
+
+Le projet est un site statique : pousse le dépôt sur GitHub, puis
+**Settings → Pages → Deploy from branch** (racine du dépôt). Aucune étape de build.
+
+---
+
+## Utilisation (CLI)
+
+Pour un usage perso rapide en terminal (mode clé API) :
+
+```bash
+cp .env.example .env      # puis renseigne HEVY_API_KEY, BODYWEIGHT_KG, SEX
+npm run cli
 ```
-== Hevy Ranks -- Rang des JAMBES ==
 
-Seances chargees : 137
-
----------------------------------------------
-  RANG JAMBES :  OR
----------------------------------------------
-  Volume cumule   : 128 450 kg
-  Seances jambes  : 41
-  Sets comptes    : 512  |  Reps : 4 380
-  Charge max/set  : 140 kg
-  Meilleure seance: 9 200 kg de volume
-
-  Progression :
-  [########----------------] 36%
-  Vers Platine : encore 71 550 kg
-```
+Affiche un rang par groupe musculaire directement dans le terminal.
 
 ---
 
 ## Comment le rang est calculé
 
-### 1. Récupération des données (`src/hevy.js`)
+### 1. Le 1RM estimé (la performance)
 
-- `GET /v1/exercise_templates` : catalogue des exercices → on récupère le
-  `primary_muscle_group` de chaque exercice (chest, quadriceps, hamstrings, ...).
-- `GET /v1/workouts/count` puis `GET /v1/workouts` (paginé, **max 10 séances/page**) :
-  tout l'historique de séances, avec le détail de chaque set (poids, reps, type...).
-
-L'authentification se fait via le header `api-key` (ta clé du `.env`).
-
-### 2. Ce qui est considéré comme « jambes » (`src/rank.js`)
-
-Un exercice compte pour les jambes si son `primary_muscle_group` est l'un de :
+Pour chaque série (hors échauffement, avec charge et reps), on estime le **1RM** avec la
+formule d'**Epley** (reps plafonnées à 12) :
 
 ```
-quadriceps · hamstrings · glutes · calves · abductors · adductors
+1RM estimé = charge × (1 + reps/30)
 ```
 
-### 3. Le volume (le cœur du calcul)
+On ne garde que **la meilleure série** de chaque exercice. C'est une mesure de perf, pas
+d'accumulation.
 
-Pour chaque **set** d'un exercice de jambes, on calcule le **volume** :
+La **charge effective** dépend du type d'exercice Hevy :
+
+| Type Hevy              | Charge utilisée               |
+| ---------------------- | ----------------------------- |
+| `weight_reps`          | poids externe                 |
+| `bodyweight_weighted`  | poids de corps + poids ajouté |
+| `bodyweight_assisted`  | poids de corps − assistance   |
+| autres (reps/durée…)   | non compté                    |
+
+### 2. Équivalent « lift de référence » relatif au poids de corps
+
+Chaque groupe a un **lift de référence** (Squat pour les jambes, Développé couché pour les
+pecs, etc.). Chaque exercice a un **coefficient** = son 1RM typique rapporté à ce lift de
+référence. On calcule :
 
 ```
-volume_du_set = poids_kg × répétitions
+équivalent = (1RM estimé / coefficient) / poids_de_corps
 ```
 
-Un set n'est compté que si :
+Le **rang d'un groupe = ta meilleure valeur** parmi ses exercices (ta perf unique).
+Les coefficients gèrent l'**anglais et le français** et sont insensibles aux accents.
 
-- il a un **poids > 0** et des **reps > 0**, et
-- ce **n'est pas un échauffement** (`type = "warmup"` est ignoré).
+### 3. Groupes musculaires
 
-> Pourquoi le volume ? C'est la mesure la plus classique du « travail total » réalisé
-> par un muscle (aussi appelée *tonnage*). Elle récompense à la fois la charge lourde
-> et le volume d'entraînement (séries × reps), ce qui en fait une bonne base d'XP.
+Les `primary_muscle_group` de Hevy sont regroupés :
 
-Le **volume cumulé** = somme des volumes de tous les sets de jambes sur **tout ton
-historique**. C'est cette valeur qui détermine ton rang.
+- **Jambes** : quadriceps, ischios, fessiers, mollets, adducteurs, abducteurs
+- **Pectoraux** : chest
+- **Dos** : lats, upper/lower back, traps
+- **Épaules** : shoulders, neck
+- **Bras** : biceps, triceps, avant-bras
+- **Abdos** : abdominals
 
 ### 4. Des paliers au rang
 
-Le volume cumulé (en kg) est comparé à des paliers :
+L'équivalent (1RM/poids de corps) est comparé à **9 paliers** propres à chaque groupe
+(standards masculins × ~0.72 si `SEX=female`). Exemple pour les Jambes (référence Squat) :
 
-| Rang     | Volume cumulé requis |
-| -------- | -------------------- |
-| Bronze   | 0 kg                 |
-| Argent   | 25 000 kg            |
-| Or       | 75 000 kg            |
-| Platine  | 200 000 kg           |
-| Diamant  | 500 000 kg           |
-| Maître   | 1 000 000 kg         |
-| Légende  | 2 500 000 kg         |
-
-La **progression** affichée est le pourcentage parcouru entre le palier actuel et le
-suivant :
-
-```
-progression = (volume - palier_actuel) / (palier_suivant - palier_actuel)
-```
-
-### Autres stats affichées
-
-- **Séances jambes** : nombre de jours distincts avec au moins un set de jambes.
-- **Charge max/set** : le poids le plus lourd soulevé sur un set de jambes.
-- **Meilleure séance** : le plus gros volume de jambes réalisé en une seule séance.
-- **Top exercices** : tes 5 exercices de jambes classés par volume total.
+| Rang     | Éq. Squat (1RM/PdC) |
+| -------- | ------------------- |
+| Bronze   | < 0.5               |
+| Iron     | ≥ 0.5               |
+| Gold     | ≥ 0.75              |
+| Platinum | ≥ 1.0               |
+| Diamond  | ≥ 1.25              |
+| Titan    | ≥ 1.5               |
+| Colossus | ≥ 1.75              |
+| Olympian | ≥ 2.1               |
+| Mythic   | ≥ 2.5               |
 
 ---
 
 ## Personnaliser
 
-- **Changer les seuils de rang** : édite le tableau `RANKS` dans `src/rank.js`.
-- **Changer les muscles ciblés** : édite `LEG_MUSCLES` (ou passe un autre `Set` de
-  muscles à `computeMuscleStats` pour créer un rang « pecs », « dos », etc.).
-- **Changer la formule** : la logique de volume est isolée dans `computeMuscleStats`,
-  facile à remplacer (ex. pondérer par le RPE, la 1RM estimée, etc.).
+- **Paliers, groupes, lifts de référence** : objet `GROUPS` dans `src/engine.js`.
+- **Coefficients par exercice (EN/FR)** : `GROUP_COEFFS` dans `src/engine.js`.
+- **Emblèmes** : remplace/régénère les fichiers de `assets/ranks/` (noms conservés dans `RANK_TIERS`, `src/engine.js`), puis lance `python scripts/optimize-ranks.py` pour les redimensionner/compresser.
+- **Catalogue d'exercices** : `npm run refresh-catalog` (régénère `data/exercise-templates.json`).
 
-## Structure du projet
+## Structure
 
 ```
+index.html / styles.css / app.js   # site web (GitHub Pages)
+assets/ranks/rank-01..09-*.png      # emblèmes de rang (IA, 256px)
+data/exercise-templates.json        # catalogue titre -> muscle (embarqué)
 src/
-  env.js     # mini parseur .env (zéro dépendance)
-  hevy.js    # client de l'API Hevy (fetch + pagination + retry)
-  rank.js    # muscles ciblés, calcul du volume et des rangs
-  index.js   # CLI : récupère, calcule et affiche le rang
-.env.example # modèle de configuration
+  engine.js   # moteur de rang partagé (navigateur + Node)
+  csv.js      # parseur du CSV d'export Hevy
+  hevy.js     # client API Hevy (workouts, templates, poids de corps)
+  env.js      # mini parseur .env (CLI uniquement)
+  index.js    # CLI
+scripts/refresh-catalog.js
 ```
 
 ## Limites connues
 
-- L'API Hevy est en **v0.0.1** : structure susceptible de changer (voir la doc officielle).
-- Pagination des séances limitée à **10/page** → sur un gros historique, le premier
-  chargement fait plusieurs appels (pas de cache local dans ce POC).
-- Le volume ignore les exercices sans poids (cardio, poids de corps sans charge, durée).
+- API Hevy en **v0.0.1** (susceptible de changer) et **CORS** possible en navigateur.
+- Coefficients et seuils = **approximations** (standards de force courants), ajustables.
+- Les exercices **au poids de corps sans charge** (reps only) et le **cardio** ne comptent
+  pas dans le rang de force.
+- Le rang par **muscle individuel** (et non par groupe) est prévu pour plus tard.
 
-## Liens utiles
+## Roadmap
 
-- Doc API : https://api.hevyapp.com/docs
+- Rang par muscle précis (option), en plus du rang par groupe.
+- Leaderboard multi-utilisateurs (nécessite un backend + accord de Hevy).
+- Bodyweight-reps score pour la callisthénie.
+
+## Liens
+
+- API Hevy : https://api.hevyapp.com/docs
 - Générer sa clé : https://hevy.com/settings?developer
