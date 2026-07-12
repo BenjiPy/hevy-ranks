@@ -56,11 +56,21 @@ function loadCatalog() {
 
 /* ---------------- Navigation ---------------- */
 const views = [...document.querySelectorAll(".view")];
+let currentView = views.find((v) => !v.classList.contains("hidden"))?.id ?? "landing";
+let previousView = null;
 function show(id) {
+  if (id === currentView) return;
+  previousView = currentView;
+  currentView = id;
   for (const v of views) v.classList.toggle("hidden", v.id !== id);
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 document.addEventListener("click", (e) => {
+  const back = e.target.closest("[data-back]");
+  if (back) {
+    show(previousView ?? back.dataset.back ?? "landing");
+    return;
+  }
   const btn = e.target.closest("[data-goto]");
   if (btn) show(btn.dataset.goto);
 });
