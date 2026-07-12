@@ -9,6 +9,7 @@ import {
 } from "./src/engine.js";
 
 const RANK_IMG = (tier) => `assets/ranks/${tier.img}`;
+const RESULTS_KEY = "hevy_results_html";
 const nf = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
 const fmt = (n) => nf.format(n);
 
@@ -100,6 +101,7 @@ function fillStrip(el) {
 fillStrip(document.getElementById("rankStrip"));
 buildRanksPage();
 enhanceSelects();
+restoreResults();
 
 /* ---------------- Custom listbox (replaces native <select>) ---------------- */
 function enhanceSelects() {
@@ -414,7 +416,33 @@ function render(result, meta) {
     ? `${unmatched} exercise(s) weren't recognized (custom / not loaded) and were skipped. Ranks are tunable estimates.`
     : "Ranks are estimates based on the Epley 1RM and tunable strength standards.";
 
+  persistResults();
   show("results");
+}
+
+/* ---------------- Persist results (survive navigation & reload) ---------------- */
+function persistResults() {
+  document.getElementById("resumeRow")?.classList.remove("hidden");
+  try {
+    sessionStorage.setItem(
+      RESULTS_KEY,
+      document.getElementById("results").innerHTML
+    );
+  } catch {
+    /* storage unavailable (private mode, quota): keep in-DOM only */
+  }
+}
+
+function restoreResults() {
+  let saved = null;
+  try {
+    saved = sessionStorage.getItem(RESULTS_KEY);
+  } catch {
+    /* ignore */
+  }
+  if (!saved) return;
+  document.getElementById("results").innerHTML = saved;
+  document.getElementById("resumeRow")?.classList.remove("hidden");
 }
 
 /* ---------------- How-it-works page ---------------- */
