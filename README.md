@@ -214,6 +214,12 @@ release. Suggestions welcome — open an issue.
       at Titan, minimum 3 sessions per exercise, top-tier thresholds spread
       out, per-group accordion detail, "Exercises not counted" section,
       versioned footer + changelog.
+- [x] **v0.3** — Results-reveal confetti, animated rank-parade loader,
+      styled rank tooltip with per-rank colored glow, iOS-safe CSV picker
+      (overlay input + UTF-8 read + widened MIME accept), CSV validation
+      (extension / MIME / size / empty), FR+EN title fallback with locale
+      notice for non-English Hevy exports, engine `hasData` hardening,
+      fully English codebase.
 
 ### Planned (next up)
 

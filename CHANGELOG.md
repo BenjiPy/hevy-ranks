@@ -15,8 +15,20 @@ Safari fix. Ranking engine, coefficients and thresholds are
 - **Results confetti:** the dashboard now lands with a canvas-based
   confetti burst colored from your top rank's palette (~200 particles,
   gravity + drag, HiDPI-aware). Fires only on fresh calculations —
-  not on F5, not on the "Back to your results" shortcut. Skipped when
-  `prefers-reduced-motion` is set.
+  not on F5, not on the "Back to your results" shortcut. Intentionally
+  runs regardless of `prefers-reduced-motion` — it's a single-shot ~4s
+  non-strobing decorative reveal, not the recurring/parallax kind of
+  motion the preference is designed to guard against.
+- **Non-English CSV support:** exercises whose title isn't in the
+  English-only Hevy catalog (typical for French / Spanish / etc.
+  exports) are now routed via a FR+EN keyword fallback covering ~95%
+  of the standard exercise list. The results page shows a discreet
+  notice when many exercises were matched this way, and the CSV
+  import panel has an upfront tip telling users to switch Hevy to
+  English for a strictly perfect mapping.
+- **Match statistics:** `computeRanks` now returns
+  `matchStats: { catalog, inferred, total }` so the UI can decide
+  when to surface the locale notice.
 - **Rank parade loader:** the plain spinner is replaced by the 9 rank
   emblems lighting up in sequence (climb-the-ladder animation), each
   glowing in its own color, with an indeterminate progress bar and a
@@ -44,6 +56,31 @@ Safari fix. Ranking engine, coefficients and thresholds are
   widened `accept` to `.csv,text/csv,text/plain,application/vnd.ms-excel`
   so the CSV isn't greyed out in the Files picker (Hevy's export is
   often served as `text/plain` or `application/octet-stream`).
+- **iOS Safari — French CSV read as mojibake.**
+  `FileReader.readAsText` was silently decoding files coming from
+  the Files/iCloud picker as Windows-1252, turning accented exercise
+  titles into garbage before the parser could see them. Only
+  ASCII-named exercises (typically Core) were being recognized.
+  Now uses `file.text()` (UTF-8 per spec) with a
+  `FileReader.readAsText(file, "UTF-8")` fallback, and strips a
+  leading UTF-8 BOM if present.
+- **French exports produced empty ranks.** Even with UTF-8 fixed,
+  the English-only Hevy catalog couldn't map French titles like
+  `Squat (Barre)`, `Développé Couché`, `Presse à Cuisses`, etc. The
+  new title-based group inference (see Added) covers this. Verified
+  end-to-end against a real FR-locale CSV: all 6 groups populate and
+  the "Exercises not counted" list drops to 0.
+- **Confetti never fired when the OS reported
+  `prefers-reduced-motion: reduce`.** Legitimate for looping /
+  parallax animations, but not for a 4-second decorative reveal —
+  Windows users with "Show animations" turned off (or Chrome
+  headless environments) were seeing nothing. The gate is now
+  removed for the confetti while the looping rank-parade loader
+  keeps honoring the preference.
+- **Engine hardening for `hasData`.** A group with lifts but no
+  computable eqRatio (e.g. missing bodyweight) is now correctly
+  reported as `hasData: false`, so consumers reading `g.tier.name`
+  can't crash on `null`.
 
 ### Changed
 
