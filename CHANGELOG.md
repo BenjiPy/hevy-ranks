@@ -4,6 +4,66 @@ All notable changes to Hevy Ranks are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0-pre1] — 2026-07-12
+
+Pre-release. Big UX pass across the whole app and a critical iOS
+Safari fix. Ranking engine, coefficients and thresholds are
+**unchanged** from v0.2 — your ranks won't move.
+
+### Added
+
+- **Results confetti:** the dashboard now lands with a canvas-based
+  confetti burst colored from your top rank's palette (~200 particles,
+  gravity + drag, HiDPI-aware). Fires only on fresh calculations —
+  not on F5, not on the "Back to your results" shortcut. Skipped when
+  `prefers-reduced-motion` is set.
+- **Rank parade loader:** the plain spinner is replaced by the 9 rank
+  emblems lighting up in sequence (climb-the-ladder animation), each
+  glowing in its own color, with an indeterminate progress bar and a
+  short hint. Existing step messages still surface on top of it.
+- **Styled rank tooltip:** hovering an emblem on the landing rank
+  strip now shows a dark tooltip with a colored border matching the
+  rank, plus a colored glow + lift on the emblem itself. Replaces
+  the native browser tooltip.
+- **CSV client-side validation:** picked/dropped files are now
+  checked for extension + MIME + size (max 20 MB) + non-emptiness
+  before hitting the parser. Bad files are rejected with an explicit
+  toast instead of failing deep in the CSV parser.
+- **FileReader error handler:** clear message when the picked file
+  is on iCloud Drive but hasn't been downloaded yet.
+
+### Fixed
+
+- **iOS Safari — CSV picker didn't return the selected file.** The
+  `<label>` + `<input hidden>` structure was broken on iOS in two
+  ways: `hidden` silences the input entirely, and the `clip-rect`
+  fallback hits a known iOS bug where the picker opens, the file is
+  chosen, and the `change` event never fires. Rewritten as a `<div>`
+  dropzone with an overlay `<input type="file">`
+  (`opacity:0`, `inset:0`) — the canonical iOS-safe pattern. Also
+  widened `accept` to `.csv,text/csv,text/plain,application/vnd.ms-excel`
+  so the CSV isn't greyed out in the Files picker (Hevy's export is
+  often served as `text/plain` or `application/octet-stream`).
+
+### Changed
+
+- **Loader markup/styles:** now uses a shared `#rankParade` element
+  with `.loading-bar` / `.loading-hint` instead of the old
+  `.spinner`. Fully respects `prefers-reduced-motion`.
+- **Dropzone markup:** the `<label>` is now a `<div>` (no more
+  `for=`), and the input is CSS-overlaid on top of the whole zone.
+
+### Removed
+
+- Legacy `.spinner` CSS class (no longer referenced anywhere).
+- `visually-hidden-file` utility class (replaced by the overlay
+  pattern).
+
+### Notes
+
+- Prerelease naming: `-pre1` is a pre-release identifier per SemVer.
+  Bump to `0.3.0` (no suffix) when tagging the stable release.
+
 ## [0.2.2] — 2026-07-12
 
 ### Changed
