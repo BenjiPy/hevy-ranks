@@ -175,6 +175,12 @@
       <div class="section-title">Rank by muscle group</div>
       <div class="groups" id="groups"></div>
 
+      <div id="unmatchedSection" class="unmatched-section hidden">
+        <div class="section-title">Exercises not counted</div>
+        <p class="unmatched-lead" id="unmatchedLead"></p>
+        <ul class="unmatched-list" id="unmatchedList"></ul>
+      </div>
+
       <p class="disclaimer" id="disclaimer"></p>
       <div class="results-foot">
         <button class="btn btn-ghost" data-goto="ranks">How is this calculated?</button>
@@ -296,6 +302,21 @@
       <p>
         Hevy Ranks — open-source, non-profit. Not affiliated with Hevy. Ranks are
         estimates (Epley 1RM, tunable strength standards).
+      </p>
+      <p class="site-footer-meta">
+        <span class="app-version">v<span id="appVersion">…</span></span>
+        <span class="dot">·</span>
+        <a
+          href="https://github.com/BenjiPy/hevy-ranks/blob/main/CHANGELOG.md"
+          target="_blank"
+          rel="noopener"
+        >Changelog</a>
+        <span class="dot">·</span>
+        <a
+          href="https://github.com/BenjiPy/hevy-ranks"
+          target="_blank"
+          rel="noopener"
+        >GitHub</a>
       </p>
     </footer>
 

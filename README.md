@@ -23,9 +23,10 @@
 
 ## What it does
 
-Hevy Ranks reads your training data and assigns each muscle group (**Legs, Chest, Back, Shoulders, Arms, Abs**) a rank based on your **actual performance**, not on how much volume you pile up.
+Hevy Ranks reads your training data and assigns each muscle group (**Legs, Chest, Back, Shoulders, Arms, Core**) a rank based on your **actual performance**, not on how much volume you pile up.
 
-- **Performance-based** — ranks come from your estimated **1RM relative to your bodyweight**. One heavy lift on your very first session can already earn a high rank.
+- **Performance-based** — ranks come from your estimated **1RM relative to your bodyweight**, aggregated across your top compound lifts per group.
+- **Isolation-proof** — a couple of heavy calf-press or pec-deck sets can no longer inflate a whole muscle group's rank (see [How ranking works](#how-ranking-works)).
 - **Two ways to load data** — use a **Hevy API key** (Pro) *or* import the **CSV export** (no key, no Pro account).
 - **Runs entirely in your browser** — a static site, ready for **GitHub Pages**. No data ever leaves your machine.
 - **Zero dependencies** — plain JavaScript, `fetch`, ES modules.
@@ -38,7 +39,7 @@ The 9 ranks: **Bronze · Iron · Gold · Platinum · Diamond · Titan · Colossu
 
 ## How ranking works
 
-### 1. Estimated 1RM (the performance)
+### 1. Estimated 1RM (per exercise)
 
 For every working set (warm-ups excluded, with a load and reps), the **1RM** is estimated with the **Epley** formula (reps capped at 12):
 
@@ -46,7 +47,7 @@ For every working set (warm-ups excluded, with a load and reps), the **1RM** is 
 estimated 1RM = load × (1 + reps / 30)
 ```
 
-Only the **best set** of each exercise is kept — this measures peak performance, not accumulation.
+For each exercise, only the **best working set across all your sessions** is kept — this measures peak performance, not accumulation.
 
 The **effective load** depends on the Hevy exercise type:
 
@@ -65,9 +66,20 @@ Each group has a **reference lift** (Squat for legs, Bench Press for chest, etc.
 equivalent = (estimated 1RM / coefficient) / bodyweight
 ```
 
-A group's rank is your **best value** across its exercises. Coefficients handle **English and French** exercise names and ignore accents.
+Coefficients handle **English and French** exercise names and ignore accents.
 
-### 3. Muscle groups
+### 3. Composite rank per group
+
+Since v0.2, a group's rank is a **weighted average of your top 3 compound lifts** (weights `1.0 / 0.5 / 0.25`), rather than a single best lift. This spreads the influence across your real work and prevents a lucky one-off set from carrying the group.
+
+Two guardrails avoid gaming the score:
+
+- **Minimum 3 distinct sessions** per exercise. A movement you tried once or twice for a friend won't count toward your rank (it's still shown in the details).
+- **Isolation exercises don't drive the score** when a compound is available. Calf press, back extension / hyperextension, pec deck, shrugs, most curls and triceps extensions are flagged as isolation. If **no compound lift qualifies** for a group, the isolation exercises are used as a fallback but the rank is **capped at Titan**.
+
+The dashboard shows only the group's rank and name; click a group to see the composite breakdown, the exact lifts used, and the lifts excluded (with the reason).
+
+### 4. Muscle groups
 
 Hevy's `primary_muscle_group` values are bucketed into:
 
@@ -78,11 +90,11 @@ Hevy's `primary_muscle_group` values are bucketed into:
 | Back      | lats, upper/lower back, traps                        |
 | Shoulders | shoulders, neck                                      |
 | Arms      | biceps, triceps, forearms                            |
-| Abs       | abdominals                                           |
+| Core      | abdominals                                           |
 
-### 4. From equivalent to rank
+### 5. From equivalent to rank
 
-The equivalent (1RM / bodyweight) is compared against **9 thresholds** tuned per group (male standards × ~0.72 when `SEX=female`). Example for Legs (Squat reference):
+The composite equivalent (1RM / bodyweight) is compared against **9 thresholds** tuned per group (male standards × ~0.72 when `SEX=female`). Example for Legs (Squat reference):
 
 | Rank     | Squat eq. (1RM / BW) |
 | -------- | -------------------- |
@@ -92,9 +104,9 @@ The equivalent (1RM / bodyweight) is compared against **9 thresholds** tuned per
 | Platinum | ≥ 1.0                |
 | Diamond  | ≥ 1.25               |
 | Titan    | ≥ 1.5                |
-| Colossus | ≥ 1.75               |
-| Olympian | ≥ 2.1                |
-| Mythic   | ≥ 2.5                |
+| Colossus | ≥ 1.85               |
+| Olympian | ≥ 2.3                |
+| Mythic   | ≥ 3.0                |
 
 ---
 
@@ -165,14 +177,18 @@ scripts/
 ## Known limitations
 
 - Hevy API is **v0.0.1** (subject to change) and may hit **CORS** in the browser.
-- Coefficients and thresholds are **approximations** (common strength standards), adjustable.
-- **Bodyweight-only** movements (reps only) and **cardio** don't count toward strength rank.
+- Coefficients and thresholds are **approximations** (common strength standards), adjustable — see the [changelog](CHANGELOG.md) for how they evolve.
+- **Cardio and mobility** movements don't count toward strength rank.
+- If a group has **no compound lift with ≥ 3 sessions**, its rank falls back to your isolation lifts and is **capped at Titan**.
 - Per-**individual-muscle** ranking (instead of per group) is planned.
 
 ## Roadmap
 
+- Sub-tiers inside each rank (Gold I / II / III) for finer progression tracking.
+- Actionable recommendations ("do X to reach the next tier").
+- Hover-based rank legend directly on the dashboard.
 - Precise per-muscle rank (opt-in), alongside the per-group rank.
-- Multi-user leaderboard (needs a backend + Hevy's agreement).
+- True percentiles against other users (would require an opt-in backend).
 - Bodyweight-reps score for calisthenics.
 
 ## Links

@@ -73,16 +73,19 @@ async function main() {
   for (const g of Object.values(result.groups)) {
     const name = g.group.label.padEnd(11);
     if (!g.hasData) {
-      console.log(`  ${name} : -- (aucune donnee chargee)`);
+      console.log(`  ${name} : -- (aucun exo qualifie)`);
       continue;
     }
-    const tierName = `${g.tier.name}`.padEnd(9);
-    const detail =
-      `${g.best.title} ${fmt(g.best.load)}kg x${g.best.reps} ` +
-      `-> 1RM ${fmt(g.best.best1RM)}kg (${fmt(g.best.eqRatio)}x PdC)`;
-    console.log(`  ${name} : ${tierName} ${bar(g.progress)}  ${detail}`);
+    const tierName = `${g.tier.name}${g.capped ? "*" : ""}`.padEnd(10);
+    const composite = `composite ${fmt(g.eqRatio)}x PdC`;
+    const topExo =
+      `top: ${g.best.title} ${fmt(g.best.load)}kg x${g.best.reps} ` +
+      `-> 1RM ${fmt(g.best.best1RM)}kg`;
+    console.log(`  ${name} : ${tierName} ${bar(g.progress)}  ${composite} | ${topExo}`);
   }
-  console.log("=====================================================\n");
+  console.log("=====================================================");
+  console.log("  * = rang plafonne (aucun compound qualifie, isolations seules)");
+  console.log(`  Composite : moyenne ponderee des top 3 exos compounds (>= ${result.minSessions} seances).\n`);
 }
 
 main().catch((err) => {
