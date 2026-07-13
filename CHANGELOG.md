@@ -4,6 +4,66 @@ All notable changes to Hevy Ranks are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — targeting v0.3.1 (hotfix)
+
+### Added
+
+- **Multilingual keyword coverage (ES + DE + PT + IT).** `GROUP_HINTS`
+  and the `__skip__` cardio/mobility list now cover Spanish, German,
+  Portuguese and Italian on top of English and French, so users whose
+  Hevy app runs in any of these languages get the same title-based
+  fallback quality. Also added many missing EN/FR variants
+  (`Pallof`, `Meadows Row`, `Landmine Press`, `Belt Squat`,
+  `Muscle Up`, cable crossover, farmer carry, tapis de course, etc.).
+- **Multilingual coefficient matching (`GROUP_COEFFS`).** The
+  per-exercise coefficient table now recognises ES + DE + PT + IT
+  keywords for all major movements, so a Spanish `Prensa`, German
+  `Beinpresse` or Italian `Pressa Gambe` gets the same coefficient
+  (3.0) as the English `Leg Press` — instead of falling through to
+  the group default (which was over-crediting foreign users on
+  machine-friendly lifts like leg press / pushdown / calf raise).
+  New entries covered: squat, deadlift, bench press, pull-up, row,
+  shoulder press, lateral raise, calves, glutes, biceps curl,
+  triceps pushdown, plus additions like `Belt Squat`, `Meadows Row`,
+  `Landmine Press`, `Pallof Press`, `Cable Crossover`, `Farmer Carry`,
+  `Ab Wheel`, `Sissy Squat`, etc. `bodyweightFraction()` extended to
+  cover FR/ES/DE/PT/IT variants of pull-up / squat / push-up.
+- **Fuzzy catalog lookup.** `buildCatalog()` now indexes each
+  template by a *canonical* form (accents / punctuation / parens
+  stripped, tokens sorted, only true fillers dropped — equipment and
+  position kept because they discriminate templates). Titles like
+  `Barbell Bench Press`, `Squat Barbell` or
+  `Bench Press Barbell Close Grip` now find their exact catalog
+  entries even though the stored form is `Bench Press (Barbell)` /
+  `Squat (Barbell)` / `Bench Press - Close Grip (Barbell)`.
+
+### Fixed
+
+- **Word-boundary matching for compound languages.** `matchesWord()`
+  now allows a trailing compound tail for single-word needles of ≥ 5
+  chars, so German compounds like `Bankdrucken`, `Bizepscurl` and
+  `Schulterdrucken` match hints `bank`, `bizeps`, `schulter`. Kept a
+  strict leading boundary so short needles (`run`, `velo`, `up`)
+  never over-match. Multi-word needles remain strict on their final
+  word so `Pull Upright Row` doesn't false-match `pull up`.
+- **`corda` no longer skips arm work.** The generic Portuguese /
+  Italian token `corda` (used in `Trizeps na Corda` = rope triceps
+  pushdown) was on the cardio skip list because of jump rope. Now
+  only the specific multi-word forms (`salto de corda`,
+  `salto della corda`, `corde a sauter`) trigger the skip, so triceps
+  rope work is correctly routed to Arms.
+- **Assisted-machine sign bug.** Assisted variants (`Pull Up (Assisted)`,
+  `Chin Up (Band)`, `Dip (Assisted)`, and their FR / ES / DE / PT / IT
+  equivalents) were treated as **added** weight instead of subtracted
+  when the CSV title didn't match the English template catalog — the
+  engine fell back to the default `weight_reps` type, so *more*
+  assistance actually **inflated** the Back / Chest score. Fixed by
+  detecting assisted / weighted variants directly from the exercise
+  title (multilingual keyword detector) and overriding the load
+  semantics accordingly. `effectiveLoad()` for `bodyweight_assisted`
+  now returns `null` (skip the set) when assistance meets or exceeds
+  bodyweight, instead of a bogus `0`.
+
 ## [0.3.0] — 2026-07-12
 
 First stable release of the v0.3 line. Promotes `v0.3.0-pre1` to
