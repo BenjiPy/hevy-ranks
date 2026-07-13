@@ -347,6 +347,31 @@ export function weightForReps(oneRm, reps) {
   return one / (1 + r / 30);
 }
 
+/**
+ * Detect assisted/weighted bodyweight variants directly from the exercise
+ * title. Needed because when the CSV title doesn't match the (English-only)
+ * template catalog — typically for non-English Hevy exports or user-renamed
+ * exercises — `tpl?.type` is missing and we fall back to `weight_reps`. That
+ * fallback silently inverts the load semantics: for `Pull Up (Assisted)`
+ * with 40 kg of assistance we'd compute `bw + 40` (harder) instead of
+ * `bw - 40` (easier), inflating the user's Back / Chest score with the
+ * *more* assistance they use. This detector runs on the raw title and
+ * wins over the template type when it fires.
+ */
+function detectBodyweightVariantFromTitle(title) {
+  if (!title) return null;
+  const t = deburr(String(title)).toLowerCase();
+  // Assisted markers (EN + FR + ES + DE + PT + IT). Anchored to word-ish
+  // boundaries via a leading non-alnum to avoid matching "assistant" etc.
+  const assisted =
+    /(?:^|[^a-z0-9])(assisted|assiste|assistee|aided|assist|band|banded|con banda|con goma|elastico|elastique|mit band|assistita|assistito|assistida|assistido)(?:$|[^a-z0-9])/;
+  const weighted =
+    /(?:^|[^a-z0-9])(weighted|leste|lestee|charge|chargee|con peso|com peso|gewichtet|zusatzgewicht|zavorrato|zavorrata|pesado|pesada|belt)(?:$|[^a-z0-9])/;
+  if (assisted.test(t)) return "bodyweight_assisted";
+  if (weighted.test(t)) return "bodyweight_weighted";
+  return null;
+}
+
 /** Hevy exercise types considered "strength" (as opposed to cardio/mobility). */
 const STRENGTH_TYPES = new Set([
   "weight_reps",
@@ -370,8 +395,12 @@ export function effectiveLoad(weightKg, type, bodyweightKg) {
       return hasW ? w : null;
     case "bodyweight_weighted":
       return bw + (hasW ? w : 0);
-    case "bodyweight_assisted":
-      return Math.max(bw - (hasW ? w : 0), 0);
+    case "bodyweight_assisted": {
+      // Effective load = bodyweight minus assistance. Skip the set when
+      // assistance meets or exceeds bodyweight (nothing to normalize).
+      const eff = bw - (hasW ? w : 0);
+      return eff > 0 ? eff : null;
+    }
     default:
       // reps_only, duration, distance_duration, etc.: no measurable load
       return null;
@@ -583,7 +612,14 @@ export function computeRanks(
       const cameFromCatalog = groupKey != null;
       const rawTitle = ex.title ?? tpl?.title ?? "";
 
-      const type = ex.type ?? tpl?.type ?? "weight_reps";
+      let type = ex.type ?? tpl?.type ?? "weight_reps";
+      // Title-based override for assisted / weighted bodyweight variants.
+      // Wins over the template type on purpose: these markers ("Assisted",
+      // "Weighted", "Band", FR/ES/DE/PT/IT equivalents) unambiguously carry
+      // the load semantics, and this is the only signal we get when the
+      // catalog lookup missed (non-English CSVs, custom names).
+      const variantOverride = detectBodyweightVariantFromTitle(rawTitle);
+      if (variantOverride) type = variantOverride;
       // Cardio, mobility, etc.: silently ignored (not surfaced in the
       // dashboard's "not counted" section which is strength-only).
       let isStrength = STRENGTH_TYPES.has(type);

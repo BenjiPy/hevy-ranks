@@ -4,6 +4,22 @@ All notable changes to Hevy Ranks are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — targeting v0.3.1 (hotfix)
+
+### Fixed
+
+- **Assisted-machine sign bug.** Assisted variants (`Pull Up (Assisted)`,
+  `Chin Up (Band)`, `Dip (Assisted)`, and their FR / ES / DE / PT / IT
+  equivalents) were treated as **added** weight instead of subtracted
+  when the CSV title didn't match the English template catalog — the
+  engine fell back to the default `weight_reps` type, so *more*
+  assistance actually **inflated** the Back / Chest score. Fixed by
+  detecting assisted / weighted variants directly from the exercise
+  title (multilingual keyword detector) and overriding the load
+  semantics accordingly. `effectiveLoad()` for `bodyweight_assisted`
+  now returns `null` (skip the set) when assistance meets or exceeds
+  bodyweight, instead of a bogus `0`.
+
 ## [0.3.0] — 2026-07-12
 
 First stable release of the v0.3 line. Promotes `v0.3.0-pre1` to
