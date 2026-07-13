@@ -98,6 +98,10 @@ async function ensureFonts() {
       document.fonts.load("700 24px Inter"),
       document.fonts.load("800 60px Inter"),
       document.fonts.load("900 90px Inter"),
+      // Space Grotesk powers the hero headline — geometric display
+      // face with more character than Inter at large sizes.
+      document.fonts.load('700 90px "Space Grotesk"'),
+      document.fonts.load('600 30px "Space Grotesk"'),
     ]);
   } catch {
     /* Fallback silently — the system sans-serif is still readable. */
@@ -228,12 +232,13 @@ async function drawHeroCard(ctx, fmt, th, pad, top, bottom, g) {
   ctx.textBaseline = "alphabetic";
 
   // 1) Muscle group — the real headline (what the user is proud of).
-  //    Big, tight kerning, in the theme text color for max contrast.
+  //    Space Grotesk 700 has more display character than Inter at
+  //    this size, and the actual weight ships in the webfont (unlike
+  //    Inter 900 which used to be synthesised → mushy edges).
   const groupY = emblemY + emblemSize + scaleFont(w, 68);
   ctx.fillStyle = th.text;
-  ctx.font = `900 ${scaleFont(w, 90)}px Inter, system-ui, sans-serif`;
-  ctx.letterSpacing = "-2px";
-  drawText(ctx, (LABELS_EN[g.group.key] ?? g.group.key).toUpperCase(), cx, groupY, -0.03);
+  ctx.font = `700 ${scaleFont(w, 96)}px "Space Grotesk", Inter, system-ui, sans-serif`;
+  drawText(ctx, (LABELS_EN[g.group.key] ?? g.group.key).toUpperCase(), cx, groupY, -0.02);
 
   // 2) Rank badge — pill-shaped, tier color as background, dark text.
   //    Reads as a real "achievement badge" rather than a colored word.

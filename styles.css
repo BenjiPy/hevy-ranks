@@ -1675,16 +1675,23 @@ table.thresholds tbody tr:last-child td {
 .btn-share {
   --share-a: #ff8a3d;
   --share-b: #ff4d8f;
+  /* UA reset — no .btn base class here, so we normalise ourselves
+     to avoid the native grey button chrome on Safari/iOS. */
+  -webkit-appearance: none;
+  appearance: none;
+  font-family: inherit;
+  line-height: 1;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
-  padding: 14px 26px;
-  font-size: 15.5px;
+  padding: 14px 28px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.2px;
   color: #fff;
   background: linear-gradient(135deg, var(--share-a), var(--share-b));
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 14px;
   cursor: pointer;
   box-shadow:
