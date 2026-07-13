@@ -112,82 +112,137 @@ const PRIMARY_TO_GROUP = (() => {
  * Keywords in BOTH English and French, written WITHOUT accents (titles are
  * "deburred" before comparison), so it works regardless of the Hevy locale.
  */
+// Keyword lists here are matched with a plain `includes()` (substring).
+// Keep them WITHOUT accents (comparison is against a deburred title).
+// Multilingual: EN + FR + ES + DE + PT + IT keywords are grouped together
+// per entry so a `Prensa` (ES) or `Beinpresse` (DE) picks up the same
+// leg-press coefficient as `Leg Press` (EN) or `Presse a Cuisses` (FR).
+// Order matters — more specific entries must come before generic ones
+// (e.g. `front squat` before `squat`; `close grip` before `bench press`).
 const GROUP_COEFFS = {
   legs: [
-    { k: ["front squat", "squat avant"], c: 0.85 },
+    // Squat variants
+    { k: ["front squat", "squat avant", "sentadilla frontal", "frontkniebeuge", "agachamento frontal", "squat frontale"], c: 0.85 },
     { k: ["hack squat", "hack"], c: 1.35 },
     { k: ["pendulum", "pendule"], c: 1.4 },
     { k: ["box squat"], c: 0.95 },
-    { k: ["split squat", "bulgarian", "bulgare"], c: 0.5 },
+    { k: ["split squat", "bulgarian", "bulgare", "sentadilla bulgara", "bulgarische kniebeuge", "agachamento bulgaro", "squat bulgaro"], c: 0.5 },
     { k: ["goblet"], c: 0.5 },
-    { k: ["leg press", "presse a cuisses", "presse cuisses", "presse"], c: 3.0 },
-    { k: ["romanian", "rdl", "roumain"], c: 1.05 },
-    { k: ["stiff", "jambes tendues"], c: 1.0 },
-    { k: ["deadlift", "souleve de terre"], c: 1.2 },
-    { k: ["hip thrust", "poussee de hanche"], c: 1.6 },
-    { k: ["glute bridge", "pont fessier"], c: 1.4 },
-    { k: ["leg extension", "extension des jambes", "extension jambes", "leg extensions"], c: 0.9, isolation: true },
-    { k: ["leg curl", "curl ischio", "ischio", "leg curls"], c: 0.8, isolation: true },
-    { k: ["calf", "mollet"], c: 2.8, isolation: true },
-    { k: ["adductor", "abductor", "adducteur", "abducteur"], c: 0.7, isolation: true },
-    { k: ["lunge", "fente"], c: 0.5 },
+    { k: ["sissy"], c: 0.5, isolation: true },
+    { k: ["belt squat"], c: 1.4 },
+    // Press machines
+    { k: ["leg press", "presse a cuisses", "presse cuisses", "presse", "prensa", "beinpresse", "pressa gambe", "pressa"], c: 3.0 },
+    // Hinge
+    { k: ["romanian", "rdl", "roumain", "rumano", "rumeno", "rumano"], c: 1.05 },
+    { k: ["stiff", "jambes tendues", "gestreckt"], c: 1.0 },
+    { k: ["good morning"], c: 0.75 },
+    { k: ["deadlift", "souleve de terre", "peso muerto", "kreuzheben", "levantamento terra", "stacco"], c: 1.2 },
+    // Glutes
+    { k: ["hip thrust", "poussee de hanche", "empuje de cadera", "huftheben", "elevacao de quadril", "spinta anca"], c: 1.6 },
+    { k: ["glute bridge", "pont fessier", "puente gluteo", "brucke", "ponte gluteo"], c: 1.4 },
+    { k: ["cable pull through", "pull through", "pull-through"], c: 0.9 },
+    // Isolation
+    { k: ["leg extension", "extension des jambes", "extension jambes", "leg extensions", "beinstrecker", "estensione gambe", "extension cuadriceps"], c: 0.9, isolation: true },
+    { k: ["leg curl", "curl ischio", "ischio", "leg curls", "hamstring curl", "beinbeuger", "flessione gambe", "curl femoral"], c: 0.8, isolation: true },
+    { k: ["calf", "mollet", "pantorrilla", "wade", "panturrilha", "polpaccio"], c: 2.8, isolation: true },
+    { k: ["adductor", "abductor", "adducteur", "abducteur", "aductor", "abductor"], c: 0.7, isolation: true },
+    // Lunges / unilateral
+    { k: ["lunge", "fente", "zancada", "ausfallschritt", "afundo", "affondo"], c: 0.5 },
     { k: ["step up", "step-up", "montee de banc"], c: 0.5 },
-    { k: ["squat"], c: 1.0 },
+    // Generic squat (must be LAST because everything above is a squat variant)
+    { k: ["squat", "sentadilla", "kniebeuge", "agachamento"], c: 1.0 },
   ],
   chest: [
-    { k: ["incline"], c: 0.85 },
-    { k: ["decline"], c: 1.0 },
-    { k: ["ecarte", "fly", "flye", "pec deck", "pec dec", "butterfly"], c: 0.8, isolation: true },
-    { k: ["chest press", "machine"], c: 1.2 },
-    { k: ["dumbbell", "haltere", "db "], c: 0.9 },
+    // Angle variants (must come first — a title like `Incline Bench Press`
+    // should get the incline coeff, not the generic bench coeff).
+    { k: ["incline", "incliné", "inclinado", "schrag", "inclinada", "inclinata"], c: 0.85 },
+    { k: ["decline", "decliné", "declinado", "abfallend", "declinada", "declinata"], c: 1.0 },
+    // Isolation
+    { k: ["ecarte", "fly", "flye", "pec deck", "pec dec", "butterfly", "apertura", "aperture", "kurzhantel fly", "abertura", "croce"], c: 0.8, isolation: true },
+    { k: ["cable crossover", "crossover"], c: 0.7, isolation: true },
+    // Machines
+    { k: ["chest press", "machine", "prensa pecho"], c: 1.2 },
+    // Dumbbell vs barbell
+    { k: ["dumbbell", "haltere", "db ", "mancuerna", "kurzhantel", "halter", "manubri"], c: 0.9 },
+    // Dips (chest-oriented)
     { k: ["dips", "dip"], c: 1.1 },
-    { k: ["push up", "pushup", "push-up", "pompe"], c: 0.6 },
-    { k: ["bench press", "developpe couche", "developpe", "bench"], c: 1.0 },
+    // Bodyweight
+    { k: ["push up", "pushup", "push-up", "pompe", "flexion pecho", "liegestutz", "flessione", "flexao"], c: 0.6 },
+    // Generic press (LAST)
+    { k: ["bench press", "developpe couche", "developpe", "bench", "press banca", "prensa banca", "bankdruck", "supino", "panca"], c: 1.0 },
   ],
   back: [
-    { k: ["deadlift", "souleve de terre"], c: 1.4 },
+    // Deadlift (some users log it under back)
+    { k: ["deadlift", "souleve de terre", "peso muerto", "kreuzheben", "levantamento terra", "stacco"], c: 1.4 },
+    // Row variants
     { k: ["pendlay"], c: 1.0 },
+    { k: ["meadows"], c: 0.8 },
     { k: ["t-bar", "t bar", "tbar"], c: 1.1 },
-    { k: ["seated", "assis", "cable row", "tirage poulie", "rowing poulie", "tirage horizontal"], c: 1.1 },
-    { k: ["lat pulldown", "pulldown", "tirage vertical", "tirage nuque", "tirage"], c: 1.0 },
-    { k: ["pull up", "pull-up", "pullup", "chin", "traction"], c: 0.9 },
-    { k: ["dumbbell row", "one arm", "single arm", "rowing haltere", "unilateral"], c: 0.5 },
-    { k: ["back extension", "hyperextension", "hyper extension", "lombaires", "extension lombaire"], c: 2.0, isolation: true },
-    { k: ["shrug", "haussement", "shrugs"], c: 1.9, isolation: true },
-    { k: ["row", "rowing"], c: 1.0 },
+    { k: ["chest supported", "chest-supported"], c: 0.8 },
+    { k: ["seated", "assis", "cable row", "tirage poulie", "rowing poulie", "tirage horizontal", "sentado", "sitzend", "sentado", "seduto"], c: 1.1 },
+    // Pulldown
+    { k: ["lat pulldown", "pulldown", "tirage vertical", "tirage nuque", "tirage", "jalon", "latzug", "puxada", "lat machine"], c: 1.0 },
+    // Pull-up family
+    { k: ["pull up", "pull-up", "pullup", "chin", "traction", "dominada", "klimmzug", "barra fixa", "trazion", "muscle up"], c: 0.9 },
+    // Single-arm row
+    { k: ["dumbbell row", "one arm", "single arm", "rowing haltere", "unilateral", "einarmig", "una mano"], c: 0.5 },
+    // Lower back / erector
+    { k: ["back extension", "hyperextension", "hyper extension", "lombaires", "extension lombaire", "iperestensione", "reverse hyper"], c: 2.0, isolation: true },
+    // Traps
+    { k: ["shrug", "haussement", "shrugs", "encogimiento", "nackenheben", "encolhimento", "scrollata"], c: 1.9, isolation: true },
+    // Generic row (LAST)
+    { k: ["row", "rowing", "rudern", "remo", "remada", "rematore", "vogatore"], c: 1.0 },
   ],
   shoulders: [
     { k: ["push press"], c: 1.2 },
     { k: ["arnold"], c: 0.8 },
-    { k: ["lateral raise", "side raise", "elevation laterale", "laterale", "elevations laterales"], c: 0.5, isolation: true },
-    { k: ["front raise", "elevation frontale", "frontale"], c: 0.5, isolation: true },
-    { k: ["rear delt", "face pull", "reverse fly", "oiseau"], c: 0.55, isolation: true },
-    { k: ["upright row", "tirage menton", "rowing menton"], c: 0.6 },
-    { k: ["dumbbell", "haltere", "db "], c: 0.85 },
-    { k: ["overhead", "military", "shoulder press", "ohp", "militaire", "developpe epaules", "developpe", "press"], c: 1.0 },
+    { k: ["landmine"], c: 0.85 },
+    // Isolation raises
+    { k: ["lateral raise", "side raise", "elevation laterale", "laterale", "elevations laterales", "elevacion lateral", "seitheben", "elevacao lateral", "alzata laterale"], c: 0.5, isolation: true },
+    { k: ["front raise", "elevation frontale", "frontale", "elevacion frontal", "frontheben", "elevacao frontal", "alzata frontale"], c: 0.5, isolation: true },
+    { k: ["rear delt", "face pull", "reverse fly", "oiseau", "posterior fly", "hinterer"], c: 0.55, isolation: true },
+    { k: ["upright row", "tirage menton", "rowing menton", "remo al menton", "aufrechtes rudern", "remada alta", "tirata al mento"], c: 0.6 },
+    // Dumbbell OHP variant
+    { k: ["dumbbell", "haltere", "db ", "mancuerna", "kurzhantel", "manubri"], c: 0.85 },
+    // Generic press (LAST)
+    { k: ["overhead", "military", "shoulder press", "ohp", "militaire", "developpe epaules", "developpe", "press", "press militar", "press hombro", "schulterdrucken", "schulterpresse", "desenvolvimento", "pressa spalle"], c: 1.0 },
   ],
   arms: [
+    // Machine dips
     { k: ["machine dip", "dips assis", "dips machine", "dip machine", "seated dip"], c: 2.6 },
-    { k: ["close grip", "close-grip", "prise serree"], c: 1.6 },
-    { k: ["skull", "lying tricep", "lying triceps", "french", "barre au front"], c: 0.7, isolation: true },
-    { k: ["pushdown", "push down", "pressdown", "poulie triceps", "corde", "poulie"], c: 1.9, isolation: true },
-    { k: ["overhead tricep", "overhead extension", "extension nuque"], c: 0.6, isolation: true },
-    { k: ["extension triceps", "triceps"], c: 2.2, isolation: true },
+    // Close-grip bench (tricep-dominant)
+    { k: ["close grip", "close-grip", "prise serree", "agarre cerrado", "enge griff", "presa stretta"], c: 1.6 },
+    // Tricep isolation
+    { k: ["skull", "lying tricep", "lying triceps", "french", "barre au front", "trizeps druck"], c: 0.7, isolation: true },
+    // "corda" is safe here — the group is already known to be arms, so
+    // jump rope / other unrelated matches are filtered out upstream.
+    { k: ["pushdown", "push down", "pressdown", "poulie triceps", "corda triceps", "triceps na corda", "corda", "triceps polea", "trizepsdrucken"], c: 1.9, isolation: true },
+    { k: ["overhead tricep", "overhead extension", "extension nuque", "extension au dessus"], c: 0.6, isolation: true },
+    { k: ["extension triceps", "triceps", "trizeps", "tricipite"], c: 2.2, isolation: true },
     { k: ["dips", "dip"], c: 1.3 },
-    { k: ["preacher", "pupitre"], c: 0.85, isolation: true },
-    { k: ["hammer", "marteau"], c: 0.9, isolation: true },
+    // Bicep isolation
+    { k: ["preacher", "pupitre", "predicador", "scott curl"], c: 0.85, isolation: true },
+    { k: ["hammer", "marteau", "martillo", "hammercurl"], c: 0.9, isolation: true },
     { k: ["concentration"], c: 0.55, isolation: true },
+    { k: ["spider curl", "drag curl", "zottman", "21s"], c: 0.85, isolation: true },
     { k: ["ez", "ez-bar", "ez bar", "barre ez"], c: 0.95, isolation: true },
-    { k: ["dumbbell curl", "db curl", "curl haltere"], c: 0.85, isolation: true },
-    { k: ["wrist", "forearm", "avant-bras", "avant bras", "poignet", "reverse curl", "curl inverse"], c: 0.6, isolation: true },
-    { k: ["curl"], c: 1.0, isolation: true },
+    { k: ["dumbbell curl", "db curl", "curl haltere", "curl con manubri", "kurzhantel curl", "rosca alterna"], c: 0.85, isolation: true },
+    // Forearms
+    { k: ["wrist", "forearm", "avant-bras", "avant bras", "poignet", "reverse curl", "curl inverse", "curl invertido", "avambraccio", "unterarm", "antebraco", "antebrazo"], c: 0.6, isolation: true },
+    { k: ["farmer"], c: 1.0 },
+    // Generic bicep curl (LAST)
+    { k: ["curl", "rosca", "riccio", "bizepscurl"], c: 1.0, isolation: true },
   ],
   core: [
     { k: ["cable crunch", "crunch poulie"], c: 1.0 },
-    { k: ["weighted", "plate", "leste"], c: 0.9 },
-    { k: ["hanging", "leg raise", "knee raise", "releve de jambes", "releve de genoux", "releve"], c: 0.8 },
-    { k: ["russian twist"], c: 0.5 },
-    { k: ["crunch", "sit up", "situp", "sit-up", "releve de buste"], c: 0.9 },
+    { k: ["weighted", "plate", "leste", "con peso", "lastrado", "gewichtet", "com peso", "zavorrato"], c: 0.9 },
+    { k: ["hanging", "leg raise", "knee raise", "releve de jambes", "releve de genoux", "releve", "elevacion piernas", "beinheben", "elevacao pernas"], c: 0.8 },
+    { k: ["ab wheel", "ab roller", "rueda abdominal", "roulette abdo"], c: 1.1 },
+    { k: ["pallof"], c: 0.6 },
+    { k: ["russian twist", "torsion russe"], c: 0.5 },
+    { k: ["wood chop", "woodchop", "cable chop"], c: 0.6 },
+    { k: ["plank", "gainage", "prancha", "plancha"], c: 0.5 },
+    { k: ["crunch", "sit up", "situp", "sit-up", "releve de buste", "abdominal", "abdominali", "abdominaux"], c: 0.9 },
   ],
 };
 
@@ -208,63 +263,175 @@ function deburr(s) {
  */
 const GROUP_HINTS = [
   // Cardio / mobility / combat sports — silently ignored (returns null).
+  // EN + FR + ES + DE + PT + IT keywords.
   ["__skip__", [
-    "sparring", "boxe", "boxing", "muay", "kickbox", "mma", "judo", "grappling",
-    "cardio", "course", "running", "run", "velo", "cycling", "bike", "aerobic",
-    "rope", "corde a sauter", "jump rope",
-    "stretch", "etirement", "yoga", "mobility", "mobilite", "foam roll",
-    "walk", "marche", "hike",
+    // Combat
+    "sparring", "boxe", "boxing", "boxeo", "boxen", "boxe", "muay", "muay thai",
+    "kickbox", "kickboxing", "mma", "judo", "jiu jitsu", "bjj", "grappling",
+    "wrestling", "lutte", "lucha", "ringen", "luta", "lotta",
+    // Endurance / conditioning
+    "cardio", "course", "running", "run", "jog", "jogging", "sprint",
+    "correr", "carrera", "laufen", "corrida", "corsa",
+    "velo", "cycling", "bike", "biking", "spinning", "ciclismo", "radfahren",
+    "row erg", "rowing machine", "ergometer",
+    "swim", "swimming", "natation", "nadar", "schwimmen", "nuoto",
+    "aerobic", "hiit", "tabata", "circuit training",
+    // Jump rope — use multi-word only, `corda` alone is too generic
+    // (`Corda Triceps` = PT for "rope triceps pushdown" would false-match).
+    "corde a sauter", "jump rope", "cuerda saltar", "salto de corda",
+    "seilspringen", "salto della corda",
+    "stair master", "stairmaster", "elliptical", "elliptique", "cross trainer",
+    "treadmill", "tapis de course", "tapis roulant", "laufband",
+    "cinta de correr", "esteira",
+    // Mobility / rehab
+    "stretch", "stretching", "etirement", "estiramiento", "dehnung", "alongamento", "allungamento",
+    "yoga", "pilates",
+    "mobility", "mobilite", "movilidad", "mobilitat", "mobilidade",
+    "foam roll", "rouleau",
+    "walk", "walking", "marche", "hike", "hiking", "randonnee", "wandern", "caminata", "caminhada",
   ]],
   ["legs", [
-    "squat", "leg press", "presse a cuisses", "presse cuisse", "hack squat",
+    // Squat family
+    "squat", "sentadilla", "kniebeuge", "agachamento", "front squat", "back squat",
+    "hack squat", "sissy squat", "goblet",
+    // Press machines
+    "leg press", "presse a cuisses", "presse cuisse", "prensa", "beinpresse",
+    "leg press", "pressa gambe", "pressa",
+    "belt squat",
+    // Extension / curl
     "leg extension", "extension jambe", "extension des jambes", "extension ja",
-    "leg curl", "curl ischio", "curl jambe", "hamstring",
-    "lunge", "fente",
-    "calf", "mollet", "extension mollet",
-    "deadlift", "souleve de terre", "romanian",
-    "hip thrust", "poussee de hanche", "glute bridge", "fessier", "glute",
-    "adductor", "abductor", "adducteur", "abducteur",
-    "step up",
+    "quad extension", "extension cuadriceps", "beinstrecker", "estensione gambe",
+    "leg curl", "curl ischio", "curl jambe", "hamstring curl", "hamstring",
+    "curl femoral", "beinbeuger", "flessione gambe",
+    // Lunges / step-ups
+    "lunge", "lunges", "fente", "zancada", "ausfallschritt", "afundo", "affondo",
+    "split squat", "bulgarian",
+    "step up", "step-up",
+    // Calves
+    "calf", "calves", "mollet", "extension mollet", "pantorrilla", "wade",
+    "panturrilha", "polpaccio",
+    // Hinge
+    "deadlift", "souleve de terre", "peso muerto", "kreuzheben",
+    "levantamento terra", "levantamento peso morto", "stacco",
+    "romanian", "rdl", "stiff leg", "good morning",
+    // Glutes / hip
+    "hip thrust", "poussee de hanche", "empuje de cadera", "huftheben",
+    "elevacao de quadril", "spinta anca",
+    "glute bridge", "pont fessier", "puente gluteo", "brucke", "ponte gluteo",
+    "kickback", "abduction", "adduction", "adductor", "abductor",
+    "adducteur", "abducteur", "aductor", "abductor",
+    "fessier", "glute", "gluteo", "gesass", "gluteo",
+    "cable pull through", "pull through", "pull-through",
   ]],
   ["chest", [
+    // Press
     "bench press", "developpe couche", "developpe incline", "developpe decline",
-    "chest press", "pec deck", "peck deck", "butterfly",
-    "ecarte", "ecartes", "fly", "cable fly", "chest fly",
-    "pectoraux", "pec ", "chest ", "push up", "pompes", "pushup", "dip",
+    "press banca", "prensa banca", "bankdruck", "bank drucken",
+    "supino", "panca piana",
+    "panca inclinata", "panca declinata", "chest press",
+    "incline press", "decline press", "flat bench",
+    // Fly / adduction
+    "pec deck", "peck deck", "butterfly", "pec fly", "peck fly",
+    "ecarte", "ecartes", "aperture", "apertura", "kurzhantel fly",
+    "fly", "cable fly", "chest fly", "dumbbell fly", "cable crossover",
+    // Bodyweight
+    "push up", "pushup", "push-up", "pompes", "pompe",
+    "flexion pecho", "liegestutz", "flessione", "flexao",
+    "dip", "chest dip",
+    // Generic
+    "pectoraux", "pec ", "pecs", "chest ", "pecho", "brust", "peito", "petto",
   ]],
   ["back", [
-    "row", "rowing", "tirage", "seated row", "bent over",
-    "pull up", "pull-up", "pullup", "chin up", "chinup", "traction",
-    "pulldown", "tirage vertical", "tirage nuque", "lat ",
-    "deadlift", "souleve de terre",
-    "shrug", "haussement",
-    "reverse fly", "face pull", "rear delt", "oiseau",
-    "back extension", "extension du dos", "hyperextension",
-    "dos ",
+    // Row family
+    "row", "rowing", "bent over", "seated row", "tirage horizontal",
+    "rowing barre", "rowing haltere", "rowing t-bar", "t bar row", "t-bar row",
+    "chest supported row", "meadows row", "pendlay",
+    "tirage", "rudern", "remo", "remada", "rematore", "vogatore",
+    // Pull-up family
+    "pull up", "pull-up", "pullup", "chin up", "chin-up", "chinup",
+    "traction", "dominada", "dominadas", "klimmzug", "barra fixa", "trazione", "trazioni",
+    "muscle up", "muscle-up",
+    // Pulldown
+    "pulldown", "lat pulldown", "tirage vertical", "tirage nuque", "tirage poulie",
+    "jalon", "jalones", "latzug", "puxada", "lat machine",
+    "lat ", "grand dorsal",
+    // Hinge (also legs, but often user-classified as back)
+    "deadlift", "souleve de terre", "peso muerto", "kreuzheben",
+    "levantamento terra", "stacco",
+    // Traps / rear delt
+    "shrug", "haussement", "encogimiento", "nackenheben", "encolhimento", "scrollata",
+    "reverse fly", "face pull", "rear delt", "oiseau", "rear deltoid",
+    "elevation posterieure", "posterior fly",
+    // Erector / lower back
+    "back extension", "extension du dos", "hyperextension", "hiper extension",
+    "iperestensione", "reverse hyper",
+    "good morning",
+    // Generic
+    "dos ", "espalda", "rucken", "costas", "schiena",
   ]],
   ["shoulders", [
+    // Press
     "overhead press", "shoulder press", "developpe militaire", "developpe epaule",
-    "arnold", "ohp",
-    "lateral raise", "elevation lateral", "elevation frontale", "front raise",
-    "upright row", "tirage menton",
-    "epaule",
+    "press militar", "press hombro", "schulterdrucken", "schulterpresse",
+    "desenvolvimento", "pressa spalle", "military press", "arnold",
+    "ohp", "push press", "strict press", "seated shoulder press",
+    "landmine press",
+    // Raises
+    "lateral raise", "elevation lateral", "elevation laterale",
+    "elevacion lateral", "seitheben", "elevacao lateral", "alzata laterale",
+    "front raise", "elevation frontale", "elevation frontale",
+    "elevacion frontal", "frontheben", "elevacao frontal", "alzata frontale",
+    // Upright row
+    "upright row", "tirage menton", "remo al menton", "aufrechtes rudern",
+    "remada alta", "tirata al mento",
+    // Generic
+    "epaule", "epaules", "hombro", "schulter", "ombro", "spalla",
+    "deltoid", "delto", "deltoide", "deltoides",
   ]],
   ["arms", [
-    "bicep", "biceps", "curl", "hammer curl", "curl marteau", "preacher",
-    "concentration curl", "curl inverse",
-    "tricep", "triceps", "extension triceps", "extension tri",
-    "pushdown", "poulie triceps", "kickback",
-    "skull crush", "barre au front",
-    "forearm", "avant-bras", "wrist curl",
+    // Biceps
+    "bicep", "biceps", "bizeps",
+    "curl", "hammer curl", "curl marteau", "curl martillo",
+    "hammer curl", "hammercurl", "kurzhantel curl", "rosca", "rosca alterna",
+    "curl con manubri", "riccio",
+    "preacher", "curl pupitre", "predicador", "scott curl",
+    "concentration curl", "curl concentre",
+    "curl inverse", "reverse curl", "curl invertido", "curl invertido",
+    "curl 21", "spider curl", "drag curl", "zottman",
+    // Triceps
+    "tricep", "triceps", "trizeps", "tricipite",
+    "extension triceps", "extension tri", "triceps extension",
+    "pushdown", "push-down", "push down", "poulie triceps",
+    "trizepsdrucken", "corda triceps",
+    "kickback", "retro tricep",
+    "skull crush", "skullcrusher", "barre au front", "french press",
+    "close grip bench", "close-grip bench",
+    "overhead extension", "extension au dessus",
+    // Forearms
+    "forearm", "avant-bras", "avambraccio", "unterarm", "antebraco", "antebrazo",
+    "wrist curl", "curl poignet", "reverse wrist",
+    "farmer", "farmer walk", "farmer carry",
   ]],
   ["core", [
-    "crunch", "sit up", "sit-up", "situp",
-    "plank", "gainage", "planche",
-    "ab wheel", "roulette abdo", "ab roller",
+    // Crunch / sit-up
+    "crunch", "sit up", "sit-up", "situp", "abdominal crunch",
+    "abdominale", "abdominali", "sit-up", "abdomen",
+    // Plank / iso
+    "plank", "gainage", "planche", "prancha", "plancha",
+    "hollow hold", "l sit", "l-sit",
+    // Wheel / rollout
+    "ab wheel", "roulette abdo", "ab roller", "rueda abdominal",
+    // Leg raise
     "leg raise", "releve de jambes", "releve de genoux", "knee raise",
-    "hanging leg", "toes to bar",
-    "russian twist", "wood chop",
-    "abdo", "abs ", "core", "oblique",
+    "elevacion piernas", "beinheben", "elevacao pernas",
+    "hanging leg", "hanging knee", "toes to bar", "toe to bar",
+    // Rotation / oblique
+    "russian twist", "wood chop", "woodchop", "cable chop", "pallof",
+    "torsion russe", "torsion",
+    "oblique", "obliques", "oblicuo", "obliquo",
+    // Generic
+    "abdo", "abs ", "core", "ab ", "abdominaux",
+    "bauch", "addome", "core training",
   ]],
 ];
 
@@ -293,14 +460,26 @@ export function inferGroupFromTitle(rawTitle) {
 function matchesWord(haystack, needle) {
   const words = needle.trim().split(/\s+/).map(escapeRegex);
   if (!words.length) return false;
-  // Each word may carry an optional "s" / "es" (FR/EN plural), and words
-  // are separated by any whitespace in the haystack. Overall we require
-  // a non-alphanumeric boundary before the first and after the last word
-  // (start/end of string is fine too) so short hints like "run" or "velo"
-  // never match inside longer words ("running", "developpe").
-  // Cover EN plural (curl -> curls), FR gender/number (lateral -> laterale,
-  // lateraux, laterales) with a compact suffix alternation.
-  const inner = words.map((w) => `${w}(?:es|s|e|aux)?`).join("\\s+");
+  // Inflection tails covered (compact alternation):
+  //   -s / -es     EN / FR / ES / PT plural
+  //   -e / -aux    FR gender & number
+  //   -en / -er    DE plural & infinitive markers
+  //   -o / -a / -i IT / ES / PT gender & plural
+  // For the LAST word of a multi-word needle we additionally allow any
+  // trailing letters so single-token needles like `bank` also match the
+  // German compound `bankdrucken`, `bizeps` in `bizepscurl`, etc.
+  // The leading boundary is always strict (start-of-string OR a non-
+  // alphanumeric char) so short needles like `run` or `velo` never
+  // match inside longer words such as `running` / `developpe`.
+  const suffix = "(?:es|s|e|aux|en|er|o|a|i)?";
+  // Compound tail ([a-z]*) is only enabled for single-word needles, and
+  // only when that word is long enough (≥5 chars) so short prefixes like
+  // `up` / `in` don't over-match (`Pull Upright Row` must NOT match `pull up`).
+  const compound =
+    words.length === 1 && words[0].length >= 5 ? "[a-z]*" : suffix;
+  const inner = words
+    .map((w, i) => `${w}${i === words.length - 1 ? compound : suffix}`)
+    .join("\\s+");
   const re = new RegExp(`(?:^|[^a-z0-9])${inner}(?:$|[^a-z0-9])`);
   return re.test(haystack);
 }
@@ -450,9 +629,9 @@ function matchCoeff(title, groupKey, equipment) {
  */
 function bodyweightFraction(title, groupKey) {
   const t = deburr(title);
-  if (/(pull up|pull-up|pullup|chin|traction|muscle up)/.test(t)) return 0.6;
-  if (/(pistol|squat)/.test(t)) return 0.5;
-  if (/(push up|pushup|push-up|pompe)/.test(t)) return 0.35;
+  if (/(pull up|pull-up|pullup|chin|traction|dominada|klimmzug|barra fixa|trazion|muscle up)/.test(t)) return 0.6;
+  if (/(pistol|squat|sentadilla|kniebeuge|agachamento)/.test(t)) return 0.5;
+  if (/(push up|pushup|push-up|pompe|flexion|liegestutz|flessione|flexao)/.test(t)) return 0.35;
   if (/(dip)/.test(t)) return 0.45;
   if (groupKey === "core") return 0.25;
   return 0.4;
@@ -474,12 +653,54 @@ function ratioToTierIndex(ratio, thresholds, factor) {
 export function buildCatalog(templates) {
   const byId = new Map();
   const byTitle = new Map();
+  // Secondary index for fuzzy lookups: same words in any order, no parens,
+  // no equipment/stopwords. Lets `Barbell Bench Press` match the catalog's
+  // `Bench Press (Barbell)`, `Squat Barbell` match `Squat (Barbell)`, etc.
+  const byCanonical = new Map();
   const norm = (s) => deburr(String(s).trim());
   for (const t of templates) {
     if (t.id) byId.set(t.id, t);
-    if (t.title) byTitle.set(norm(t.title), t);
+    if (t.title) {
+      byTitle.set(norm(t.title), t);
+      const canon = canonicalTitle(t.title);
+      if (canon && !byCanonical.has(canon)) byCanonical.set(canon, t);
+    }
   }
-  return { byId, byTitle, norm };
+  return { byId, byTitle, byCanonical, norm, canon: canonicalTitle };
+}
+
+/**
+ * Canonical form of an exercise title used as a fallback lookup key when
+ * the exact normalized title isn't found. Strips accents, punctuation,
+ * parentheses and common equipment / positional stopwords, then sorts
+ * the remaining tokens alphabetically so word-order variations collapse
+ * to the same key. Returns null when nothing meaningful is left.
+ */
+// Deliberately kept SHORT. Do NOT strip equipment (barbell / dumbbell /
+// cable / machine) or position (incline / decline / seated) — they are
+// what distinguishes templates like `Squat (Barbell)` vs `Squat (Band)`
+// or `Bench Press (Barbell)` vs `Incline Bench Press (Barbell)`.
+// Only true fillers go here so the canonical form remains discriminative.
+const CANON_STOPWORDS = new Set([
+  "the", "a", "an", "of", "and", "with", "in", "on", "for",
+  "de", "du", "la", "le", "les", "des", "au", "aux", "et", "avec",
+  "der", "die", "das", "den", "dem", "und", "mit",
+  "el", "los", "las", "y", "con",
+  "o", "os", "as", "e", "com",
+  "il", "lo", "gli", "i", "con",
+]);
+function canonicalTitle(title) {
+  const raw = deburr(String(title || ""))
+    .replace(/[()[\]{}]/g, " ")
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .replace(/-/g, " ")
+    .trim();
+  if (!raw) return null;
+  const tokens = raw
+    .split(/\s+/)
+    .filter((w) => w && !CANON_STOPWORDS.has(w));
+  if (!tokens.length) return null;
+  return tokens.slice().sort().join(" ");
 }
 
 /**
@@ -607,6 +828,13 @@ export function computeRanks(
     for (const ex of s.exercises ?? []) {
       let tpl = ex.templateId ? catalog.byId.get(ex.templateId) : null;
       if (!tpl && ex.title) tpl = catalog.byTitle.get(catalog.norm(ex.title));
+      // Fuzzy fallback: same words in any order (`Barbell Bench Press` ↔
+      // catalog's `Bench Press (Barbell)`), or the same title with extra
+      // equipment/position stopwords the user may have added.
+      if (!tpl && ex.title && catalog.byCanonical && catalog.canon) {
+        const canon = catalog.canon(ex.title);
+        if (canon) tpl = catalog.byCanonical.get(canon);
+      }
       const primary = tpl?.primary;
       let groupKey = primary ? PRIMARY_TO_GROUP[primary] : null;
       const cameFromCatalog = groupKey != null;
