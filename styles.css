@@ -1452,18 +1452,31 @@ table.thresholds tbody tr:last-child td {
   font-weight: 600;
 }
 /* Footer button styled to blend with the surrounding <a> links so the
-   "Your data" entry sits naturally alongside "Changelog" / "GitHub". */
+   "Your data" entry sits naturally alongside "Changelog" / "GitHub".
+   `<button>` needs a full UA reset (font + line-height + vertical-
+   alignment + no letter-spacing quirk) to actually match the anchors. */
 .footer-link {
+  appearance: none;
+  -webkit-appearance: none;
   background: none;
   border: 0;
   padding: 0;
   margin: 0;
+  font: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  vertical-align: baseline;
   color: var(--muted);
   cursor: pointer;
-  font: inherit;
+  text-decoration: none;
 }
 .footer-link:hover {
   color: var(--text);
+}
+.footer-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 /* ---------- Toast ---------- */
