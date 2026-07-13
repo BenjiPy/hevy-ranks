@@ -81,6 +81,30 @@ function loadImage(src) {
 }
 
 /**
+ * Ensure the Inter webfont is actually rendered on the canvas, not the
+ * system fallback. Canvas 2D doesn't participate in the browser's font
+ * loading pipeline: if we draw before Inter is ready, we get a generic
+ * sans-serif with poor weights (bold text looks thin & washed out).
+ * `document.fonts.load()` returns a Promise per (weight, size) so we
+ * warm up the ones we actually use before painting.
+ */
+async function ensureFonts() {
+  if (typeof document === "undefined" || !document.fonts?.load) return;
+  try {
+    await Promise.all([
+      document.fonts.load("400 22px Inter"),
+      document.fonts.load("500 22px Inter"),
+      document.fonts.load("600 30px Inter"),
+      document.fonts.load("700 24px Inter"),
+      document.fonts.load("800 60px Inter"),
+      document.fonts.load("900 90px Inter"),
+    ]);
+  } catch {
+    /* Fallback silently — the system sans-serif is still readable. */
+  }
+}
+
+/**
  * Render the export image. Returns a fully painted <canvas> (off-screen),
  * ready to be drawn into a preview or exported as a Blob via `toBlob()`.
  */
@@ -89,6 +113,8 @@ export async function renderExportCanvas(result, meta, opts = {}) {
   const theme  = EXPORT_THEMES[opts.theme]   ?? EXPORT_THEMES.dark;
   const mode   = EXPORT_MODES[opts.mode]     ?? EXPORT_MODES.all;
   const watermark = opts.watermark !== false;
+
+  await ensureFonts();
 
   const canvas = document.createElement("canvas");
   canvas.width  = format.w;
@@ -189,32 +215,116 @@ async function drawHeroCard(ctx, fmt, th, pad, top, bottom, g) {
   const boxW = w - pad * 2;
   const boxY = top + boxH * 0.05;
 
-  drawCard(ctx, pad, boxY, boxW, boxH * 0.9, th, 32);
+  // Slight accent-tinted border on the hero card so it feels featured.
+  drawCard(ctx, pad, boxY, boxW, boxH * 0.9, th, 32, g.tier.color, 0.35);
 
-  const emblemSize = Math.min(boxW * 0.55, boxH * 0.55);
-  const emblemY = boxY + boxH * 0.08;
-  await drawRankEmblem(ctx, g.tier, cx - emblemSize / 2, emblemY, emblemSize);
+  // Emblem — glow toned down (was 0.22 * size, felt neon). Enough to
+  // signal "special" without overpowering the text hierarchy below.
+  const emblemSize = Math.min(boxW * 0.52, boxH * 0.50);
+  const emblemY = boxY + boxH * 0.07;
+  await drawRankEmblem(ctx, g.tier, cx - emblemSize / 2, emblemY, emblemSize, 0.12);
 
-  const nameY = emblemY + emblemSize + scaleFont(w, 50);
   ctx.textAlign = "center";
-  ctx.fillStyle = g.tier.color;
-  ctx.font = `800 ${scaleFont(w, 84)}px Inter, system-ui, sans-serif`;
-  ctx.fillText(g.tier.name.toUpperCase(), cx, nameY);
+  ctx.textBaseline = "alphabetic";
 
+  // 1) Muscle group — the real headline (what the user is proud of).
+  //    Big, tight kerning, in the theme text color for max contrast.
+  const groupY = emblemY + emblemSize + scaleFont(w, 68);
   ctx.fillStyle = th.text;
-  ctx.font = `600 ${scaleFont(w, 30)}px Inter, system-ui, sans-serif`;
-  ctx.fillText(LABELS_EN[g.group.key] ?? g.group.key, cx, nameY + scaleFont(w, 44));
+  ctx.font = `900 ${scaleFont(w, 90)}px Inter, system-ui, sans-serif`;
+  ctx.letterSpacing = "-2px";
+  drawText(ctx, (LABELS_EN[g.group.key] ?? g.group.key).toUpperCase(), cx, groupY, -0.03);
 
+  // 2) Rank badge — pill-shaped, tier color as background, dark text.
+  //    Reads as a real "achievement badge" rather than a colored word.
+  const badgeText = g.tier.name.toUpperCase();
+  const badgeFont = `800 ${scaleFont(w, 34)}px Inter, system-ui, sans-serif`;
+  const badgeY = groupY + scaleFont(w, 40);
+  drawTierBadge(ctx, cx, badgeY, badgeText, badgeFont, g.tier.color, th);
+
+  // 3) Composite ratio — muted, tabular.
+  const compY = badgeY + scaleFont(w, 58);
   ctx.fillStyle = th.muted;
-  ctx.font = `500 ${scaleFont(w, 22)}px Inter, system-ui, sans-serif`;
-  const composite = `Composite ${g.eqRatio.toFixed(2)}× bodyweight`;
-  ctx.fillText(composite, cx, nameY + scaleFont(w, 76));
+  ctx.font = `600 ${scaleFont(w, 24)}px Inter, system-ui, sans-serif`;
+  ctx.fillText(`Composite ${g.eqRatio.toFixed(2)}× bodyweight`, cx, compY);
 
+  // 4) Top lift — tiny, just the reference so people know what drove it.
   if (g.best?.title) {
     ctx.fillStyle = th.muted;
     ctx.font = `500 ${scaleFont(w, 20)}px Inter, system-ui, sans-serif`;
-    ctx.fillText(`Top lift: ${trimText(ctx, g.best.title, boxW - pad * 2)} · est. 1RM ${g.best.best1RM.toFixed(0)} kg`, cx, nameY + scaleFont(w, 108));
+    const line = `Top: ${g.best.title} · est. 1RM ${g.best.best1RM.toFixed(0)} kg`;
+    ctx.fillText(trimText(ctx, line, boxW - pad * 2), cx, compY + scaleFont(w, 34));
   }
+}
+
+/* Rounded pill drawn behind a piece of text — used for the tier badge
+   in the hero. Auto-sized to the text width. */
+function drawTierBadge(ctx, cx, cy, text, font, color, th) {
+  ctx.save();
+  ctx.font = font;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  const m = ctx.measureText(text);
+  const padX = Math.max(24, m.width * 0.15);
+  const padY = 14;
+  const size = parseInt(font.match(/(\d+)px/)?.[1] ?? "32", 10);
+  const w = m.width + padX * 2;
+  const h = size + padY * 2;
+  const x = cx - w / 2;
+  const y = cy - h / 2;
+
+  // Subtle colored halo behind the pill for that "featured" glow,
+  // kept much softer than the previous emblem shadow.
+  ctx.shadowColor = color;
+  ctx.shadowBlur = h * 0.6;
+  ctx.fillStyle = color;
+  roundRect(ctx, x, y, w, h, h / 2);
+  ctx.fill();
+  ctx.shadowColor = "transparent";
+  ctx.shadowBlur = 0;
+
+  // Text color: contrast against the badge color. Dark themes usually
+  // have light tier colors, so black-ish reads best.
+  ctx.fillStyle = pickContrastText(color);
+  ctx.fillText(text, cx, cy + 1);
+  ctx.restore();
+}
+
+/* Return a dark or light color depending on which reads best on top
+   of the given hex background. Approximate perceptual luminance. */
+function pickContrastText(hex) {
+  if (!hex || hex[0] !== "#" || hex.length < 7) return "#0a0b1a";
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return l > 0.55 ? "#0a0b1a" : "#ffffff";
+}
+
+/* fillText with an optional letter-spacing simulated per-character.
+   Canvas doesn't natively honour letterSpacing on all browsers, so we
+   render one character at a time when spacing is requested. */
+function drawText(ctx, text, x, y, spacingEm = 0) {
+  if (!spacingEm) {
+    ctx.fillText(text, x, y);
+    return;
+  }
+  const size = parseInt(ctx.font.match(/(\d+)px/)?.[1] ?? "16", 10);
+  const spacing = size * spacingEm;
+  const widths = [...text].map((c) => ctx.measureText(c).width + spacing);
+  const total = widths.reduce((a, b) => a + b, 0) - spacing;
+  const align = ctx.textAlign;
+  let cursor;
+  if (align === "center") cursor = x - total / 2;
+  else if (align === "right") cursor = x - total;
+  else cursor = x;
+  const prevAlign = ctx.textAlign;
+  ctx.textAlign = "left";
+  for (let i = 0; i < text.length; i++) {
+    ctx.fillText(text[i], cursor, y);
+    cursor += widths[i];
+  }
+  ctx.textAlign = prevAlign;
 }
 
 /* ---------- Grid (all groups) ---------- */
@@ -353,13 +463,21 @@ function drawFooter(ctx, { w, h }, th, meta, watermark) {
 }
 
 /* ---------- Primitives ---------- */
-function drawCard(ctx, x, y, w, h, th, radius = 20, borderColor = null) {
+function drawCard(ctx, x, y, w, h, th, radius = 20, borderColor = null, borderAlpha = 1) {
   roundRect(ctx, x, y, w, h, radius);
   ctx.fillStyle = th.card;
   ctx.fill();
   ctx.lineWidth = borderColor ? 3 : 1.5;
-  ctx.strokeStyle = borderColor ?? th.stroke;
-  ctx.stroke();
+  if (borderColor && borderAlpha < 1) {
+    ctx.save();
+    ctx.globalAlpha = borderAlpha;
+    ctx.strokeStyle = borderColor;
+    ctx.stroke();
+    ctx.restore();
+  } else {
+    ctx.strokeStyle = borderColor ?? th.stroke;
+    ctx.stroke();
+  }
   // Inset top highlight for the glass feel (even on non-glass browsers,
   // this reads as a subtle bezel).
   ctx.save();
@@ -385,14 +503,14 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-async function drawRankEmblem(ctx, tier, x, y, size) {
+async function drawRankEmblem(ctx, tier, x, y, size, glowFactor = 0.22) {
   try {
     const img = await loadImage(`assets/ranks/${tier.img}`);
     // Soft coloured glow around the emblem, tinted by the tier color.
-    if (tier.color) {
+    if (tier.color && glowFactor > 0) {
       ctx.save();
       ctx.shadowColor = tier.color;
-      ctx.shadowBlur = size * 0.22;
+      ctx.shadowBlur = size * glowFactor;
       ctx.drawImage(img, x, y, size, size);
       ctx.restore();
     } else {
