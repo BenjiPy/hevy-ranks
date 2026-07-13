@@ -17,7 +17,11 @@ import {
 } from "./src/export.js";
 
 const RANK_IMG = (tier) => `assets/ranks/${tier.img}`;
-const RESULTS_KEY = "hevy_results_html";
+// Bumped in v0.3.2 (share button, restructured results shell). Old
+// cached values from v0.3.1 and earlier are ignored so users don't
+// get stuck with a pre-share-button HTML snapshot restored on top of
+// the new shell.
+const RESULTS_KEY = "hevy_results_html_v2";
 const VIEW_KEY = "hevy_view";
 const nf = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
 const fmt = (n) => nf.format(n);
@@ -891,10 +895,13 @@ function runConfetti(canvas, accent) {
 function persistResults() {
   document.getElementById("resumeRow")?.classList.remove("hidden");
   try {
-    sessionStorage.setItem(
-      RESULTS_KEY,
-      document.getElementById("results").innerHTML
-    );
+    // Persist only the dynamic content wrapper, NOT the whole #results
+    // section. That way the static shell (results-head with the back
+    // button and share CTA, results-foot with the "How is this
+    // calculated?" link) can evolve between releases without being
+    // overwritten by a stale cached HTML fragment on restore.
+    const content = document.getElementById("resultsContent");
+    if (content) sessionStorage.setItem(RESULTS_KEY, content.innerHTML);
   } catch {
     /* storage unavailable (private mode, quota): keep in-DOM only */
   }
@@ -912,7 +919,10 @@ function restoreResults() {
 
   const hasResults = Boolean(savedHtml);
   if (hasResults) {
-    document.getElementById("results").innerHTML = savedHtml;
+    // Restore only into the dynamic wrapper — the static shell is
+    // already in the initial HTML and must stay untouched.
+    const content = document.getElementById("resultsContent");
+    if (content) content.innerHTML = savedHtml;
     document.getElementById("resumeRow")?.classList.remove("hidden");
   }
 

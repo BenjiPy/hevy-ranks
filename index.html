@@ -199,6 +199,8 @@
 
     <!-- ======================= RESULTS ======================= -->
     <section id="results" class="view hidden">
+      <!-- Static shell — never persisted, so UI additions (buttons,
+           section titles) stay live across cache restores. -->
       <div class="results-head">
         <button class="back" data-goto="landing">← New calculation</button>
         <div class="results-meta" id="resultsMeta"></div>
@@ -212,23 +214,29 @@
         </button>
       </div>
 
-      <div id="localeNotice" class="locale-notice hidden"></div>
+      <!-- Only THIS wrapper is persisted to sessionStorage, so the
+           surrounding controls above/below can evolve between releases
+           without invalidating cached results. -->
+      <div id="resultsContent">
+        <div id="localeNotice" class="locale-notice hidden"></div>
 
-      <div class="overview">
-        <div class="radar-wrap" id="radarWrap"></div>
-        <div class="best" id="best"></div>
+        <div class="overview">
+          <div class="radar-wrap" id="radarWrap"></div>
+          <div class="best" id="best"></div>
+        </div>
+
+        <div class="section-title">Rank by muscle group</div>
+        <div class="groups" id="groups"></div>
+
+        <div id="unmatchedSection" class="unmatched-section hidden">
+          <div class="section-title">Exercises not counted</div>
+          <p class="unmatched-lead" id="unmatchedLead"></p>
+          <ul class="unmatched-list" id="unmatchedList"></ul>
+        </div>
+
+        <p class="disclaimer" id="disclaimer"></p>
       </div>
 
-      <div class="section-title">Rank by muscle group</div>
-      <div class="groups" id="groups"></div>
-
-      <div id="unmatchedSection" class="unmatched-section hidden">
-        <div class="section-title">Exercises not counted</div>
-        <p class="unmatched-lead" id="unmatchedLead"></p>
-        <ul class="unmatched-list" id="unmatchedList"></ul>
-      </div>
-
-      <p class="disclaimer" id="disclaimer"></p>
       <div class="results-foot">
         <button class="btn btn-ghost" data-goto="ranks">How is this calculated?</button>
       </div>
