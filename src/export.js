@@ -37,14 +37,14 @@ export const EXPORT_THEMES = {
   },
   light: {
     label: "Daylight",
-    bg1:   "#f7f8fb",
-    bg2:   "#e5eaf5",
-    bg3:   "#dbe2f2",
+    bg1:   "#eef2fa",
+    bg2:   "#c9d6f5",
+    bg3:   "#dfe6f7",
     text:  "#0f1424",
     muted: "#4c5670",
     accent:"#4a6cff",
-    card:  "rgba(15,20,36,0.05)",
-    stroke:"rgba(15,20,36,0.12)",
+    card:  "rgba(255,255,255,0.75)",
+    stroke:"rgba(15,20,36,0.15)",
   },
   accent: {
     label: "Vaporwave",
@@ -129,7 +129,7 @@ export async function renderExportCanvas(result, meta, opts = {}) {
   canvas.height = format.h;
   const ctx = canvas.getContext("2d");
 
-  drawBackground(ctx, format, theme);
+  drawBackground(ctx, format, theme, opts.theme === "light");
   await drawContent(ctx, format, theme, opts.mode ?? "all", result, meta, { hideBw });
   drawFooter(ctx, format, theme, meta, watermark);
 
@@ -137,7 +137,7 @@ export async function renderExportCanvas(result, meta, opts = {}) {
 }
 
 /* ---------- Background ---------- */
-function drawBackground(ctx, { w, h }, th) {
+function drawBackground(ctx, { w, h }, th, isLight = false) {
   // Base flat fill + two soft radial blobs for depth. Matches the
   // ambient direction of the site without depending on backdrop-filter.
   ctx.fillStyle = th.bg1;
@@ -154,10 +154,11 @@ function drawBackground(ctx, { w, h }, th) {
   blob(w * 0.90, h * 0.90, Math.max(w, h) * 0.60, th.bg3, 0.70);
   blob(w * 0.50, h * 0.50, Math.max(w, h) * 0.45, th.accent, 0.10);
 
-  // Subtle vignette so text stays readable near edges.
+  // Vignette — dark on dark themes for depth, LIGHT (white) on light
+  // themes to avoid a muddy grey wash that killed the previous export.
   const vg = ctx.createRadialGradient(w / 2, h / 2, Math.max(w, h) * 0.3, w / 2, h / 2, Math.max(w, h) * 0.75);
-  vg.addColorStop(0, "rgba(0,0,0,0)");
-  vg.addColorStop(1, "rgba(0,0,0,0.35)");
+  vg.addColorStop(0, isLight ? "rgba(255,255,255,0)" : "rgba(0,0,0,0)");
+  vg.addColorStop(1, isLight ? "rgba(15,20,36,0.10)" : "rgba(0,0,0,0.35)");
   ctx.fillStyle = vg;
   ctx.fillRect(0, 0, w, h);
 }
@@ -176,7 +177,11 @@ async function drawContent(ctx, fmt, th, mode, result, meta, extra = {}) {
     ? withData.reduce((a, b) => (b.tierIndex > a.tierIndex ? b : a))
     : null;
 
-  const headerBottom = Math.round(h * 0.22);
+  // Header height is driven by its own fonts (which scale with `w`),
+  // NOT by a fixed % of `h` — otherwise landscape (short h, huge fonts)
+  // has the title bleed into the content area.
+  const headerH = headerHeight(w, pad);
+  const headerBottom = headerH + Math.round(pad * 0.4);
   const footerTop = h - Math.round(h * 0.08);
   const contentTop = headerBottom;
   const contentBottom = footerTop - pad * 0.5;
@@ -191,21 +196,49 @@ async function drawContent(ctx, fmt, th, mode, result, meta, extra = {}) {
 }
 
 /* ---------- Header ---------- */
+/* Return the pixel height the header will occupy for a given canvas
+   width & pad. Kept in sync with drawHeader below so `drawContent` can
+   place the content area right below the last baseline. */
+function headerHeight(w, pad) {
+  const eyebrowSize = scaleFont(w, 20);
+  const titleSize   = scaleFont(w, 56);
+  const subSize     = scaleFont(w, 22);
+  const topPad      = Math.round(pad * 0.55);
+  const gapEyebrow  = Math.round(titleSize * 0.35);
+  const gapSub      = Math.round(titleSize * 0.55);
+  const eyebrowY = topPad + eyebrowSize;
+  const titleY   = eyebrowY + gapEyebrow + titleSize;
+  const subY     = titleY + gapSub;
+  // Subtitle sits on its baseline at subY; add a descent buffer.
+  return subY + Math.round(subSize * 0.3);
+}
+
 function drawHeader(ctx, { w, h }, th, pad, meta, result, extra = {}) {
   const cx = w / 2;
-  const eyebrowY = Math.round(h * 0.055);
-  const titleY   = Math.round(h * 0.115);
-  const subY     = Math.round(h * 0.165);
+  // Layout the three header lines RELATIVE TO THEIR OWN FONT HEIGHTS
+  // (which scale with `w`), instead of fixed % of `h`. Otherwise the
+  // title font (scaleFont(w,56) → ~100px at 1920) overshoots its Y slot
+  // computed from `h` (1080) and swallows the eyebrow above.
+  const eyebrowSize = scaleFont(w, 20);
+  const titleSize   = scaleFont(w, 56);
+  const subSize     = scaleFont(w, 22);
+  const topPad      = Math.round(pad * 0.55);
+  const gapEyebrow  = Math.round(titleSize * 0.35);
+  const gapSub      = Math.round(titleSize * 0.55);
+
+  const eyebrowY = topPad + eyebrowSize;
+  const titleY   = eyebrowY + gapEyebrow + titleSize;
+  const subY     = titleY + gapSub;
 
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
 
   ctx.fillStyle = th.muted;
-  ctx.font = `600 ${scaleFont(w, 20)}px Inter, system-ui, sans-serif`;
+  ctx.font = `600 ${eyebrowSize}px Inter, system-ui, sans-serif`;
   ctx.fillText("HEVY RANKS", cx, eyebrowY);
 
   ctx.fillStyle = th.text;
-  ctx.font = `800 ${scaleFont(w, 56)}px Inter, system-ui, sans-serif`;
+  ctx.font = `800 ${titleSize}px Inter, system-ui, sans-serif`;
   ctx.fillText("My strength ranks", cx, titleY);
 
   const src = meta?.source ? ` · ${meta.source}` : "";
@@ -214,25 +247,57 @@ function drawHeader(ctx, { w, h }, th, pad, meta, result, extra = {}) {
     ? ` · ${Math.round(result.bodyweightKg)} kg BW`
     : "";
   ctx.fillStyle = th.muted;
-  ctx.font = `500 ${scaleFont(w, 22)}px Inter, system-ui, sans-serif`;
+  ctx.font = `500 ${subSize}px Inter, system-ui, sans-serif`;
   ctx.fillText(`Based on my real training${src}${sessions}${bw}`, cx, subY);
+  // Suppress unused `h` warning — we now derive Y from `w` and pad.
+  void h;
 }
 
 /* ---------- Hero card ---------- */
 async function drawHeroCard(ctx, fmt, th, pad, top, bottom, g, extra = {}) {
   const { w } = fmt;
   const cx = w / 2;
-  const boxH = bottom - top;
+  const availableH = bottom - top;
   const boxW = w - pad * 2;
-  const boxY = top + boxH * 0.05;
 
-  // Slight accent-tinted border on the hero card so it feels featured.
-  drawCard(ctx, pad, boxY, boxW, boxH * 0.9, th, 32, g.tier.color, 0.35);
+  // Size the emblem from WIDTH (not the leftover height), so short
+  // landscapes don't get a tiny logo and tall portraits don't leave a
+  // huge empty band under a normal-sized card.
+  const emblemSize = Math.min(boxW * 0.48, availableH * 0.55, scaleFont(w, 520));
 
-  // Emblem — glow toned down (was 0.22 * size, felt neon). Enough to
-  // signal "special" without overpowering the text hierarchy below.
-  const emblemSize = Math.min(boxW * 0.52, boxH * 0.50);
-  const emblemY = boxY + boxH * 0.07;
+  // Pre-compute vertical space every text row takes so we can size the
+  // card to its actual content (was `boxH * 0.9` before → half-empty
+  // in portrait, cramped in landscape).
+  const gapEmblemToTitle = scaleFont(w, 60);
+  const titleSize        = scaleFont(w, 96);
+  const gapTitleToBadge  = scaleFont(w, 40);
+  const badgeSize        = scaleFont(w, 34) + 28; // font + pill padding
+  const gapBadgeToComp   = scaleFont(w, 54);
+  const compSize         = scaleFont(w, 24);
+  const gapCompToTop     = scaleFont(w, 30);
+  const topLiftSize      = g.best?.title ? scaleFont(w, 20) + 8 : 0;
+  const innerPad         = scaleFont(w, 44);
+
+  const contentH = innerPad
+    + emblemSize
+    + gapEmblemToTitle
+    + titleSize
+    + gapTitleToBadge
+    + badgeSize
+    + gapBadgeToComp
+    + compSize
+    + gapCompToTop
+    + topLiftSize
+    + innerPad;
+
+  // Center the card vertically in the available slot; clamp so it
+  // never overflows the footer area.
+  const cardH = Math.min(contentH, availableH);
+  const cardY = top + Math.max(0, (availableH - cardH) / 2);
+
+  drawCard(ctx, pad, cardY, boxW, cardH, th, 32, g.tier.color, 0.35);
+
+  const emblemY = cardY + innerPad;
   await drawRankEmblem(ctx, g.tier, cx - emblemSize / 2, emblemY, emblemSize, 0.12);
 
   ctx.textAlign = "center";
