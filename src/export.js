@@ -116,7 +116,11 @@ export async function renderExportCanvas(result, meta, opts = {}) {
   const format = EXPORT_FORMATS[opts.format] ?? EXPORT_FORMATS.square;
   const theme  = EXPORT_THEMES[opts.theme]   ?? EXPORT_THEMES.dark;
   const mode   = EXPORT_MODES[opts.mode]     ?? EXPORT_MODES.all;
-  const watermark = opts.watermark !== false;
+  // Watermark is always shown — the project is open-source and non-profit,
+  // and the URL is the only thing that lets people discover it back from
+  // a screenshot. Kept as a hard-coded true (was previously optional).
+  const watermark = true;
+  const hideBw = opts.hideBw === true;
 
   await ensureFonts();
 
@@ -126,7 +130,7 @@ export async function renderExportCanvas(result, meta, opts = {}) {
   const ctx = canvas.getContext("2d");
 
   drawBackground(ctx, format, theme);
-  await drawContent(ctx, format, theme, opts.mode ?? "all", result, meta);
+  await drawContent(ctx, format, theme, opts.mode ?? "all", result, meta, { hideBw });
   drawFooter(ctx, format, theme, meta, watermark);
 
   return canvas;
@@ -159,12 +163,12 @@ function drawBackground(ctx, { w, h }, th) {
 }
 
 /* ---------- Content dispatch ---------- */
-async function drawContent(ctx, fmt, th, mode, result, meta) {
+async function drawContent(ctx, fmt, th, mode, result, meta, extra = {}) {
   const { w, h } = fmt;
   const pad = Math.round(w * 0.06);
 
   // Header (title + subtitle) — same across all modes so the branding stays consistent.
-  drawHeader(ctx, fmt, th, pad, meta);
+  drawHeader(ctx, fmt, th, pad, meta, result, extra);
 
   const groups = Object.values(result.groups);
   const withData = groups.filter((g) => g.hasData);
@@ -178,20 +182,20 @@ async function drawContent(ctx, fmt, th, mode, result, meta) {
   const contentBottom = footerTop - pad * 0.5;
 
   if (mode === "hero" && best) {
-    await drawHeroCard(ctx, fmt, th, pad, contentTop, contentBottom, best);
+    await drawHeroCard(ctx, fmt, th, pad, contentTop, contentBottom, best, extra);
   } else if (mode === "detail") {
-    await drawDetailedGrid(ctx, fmt, th, pad, contentTop, contentBottom, groups, best);
+    await drawDetailedGrid(ctx, fmt, th, pad, contentTop, contentBottom, groups, best, extra);
   } else {
     await drawGrid(ctx, fmt, th, pad, contentTop, contentBottom, groups, best);
   }
 }
 
 /* ---------- Header ---------- */
-function drawHeader(ctx, { w, h }, th, pad, meta) {
+function drawHeader(ctx, { w, h }, th, pad, meta, result, extra = {}) {
   const cx = w / 2;
-  const eyebrowY = Math.round(h * 0.07);
-  const titleY   = Math.round(h * 0.11);
-  const subY     = Math.round(h * 0.16);
+  const eyebrowY = Math.round(h * 0.055);
+  const titleY   = Math.round(h * 0.115);
+  const subY     = Math.round(h * 0.165);
 
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
@@ -206,13 +210,16 @@ function drawHeader(ctx, { w, h }, th, pad, meta) {
 
   const src = meta?.source ? ` · ${meta.source}` : "";
   const sessions = meta?.sessions ? ` · ${meta.sessions} workouts` : "";
+  const bw = !extra.hideBw && Number.isFinite(result?.bodyweightKg) && result.bodyweightKg > 0
+    ? ` · ${Math.round(result.bodyweightKg)} kg BW`
+    : "";
   ctx.fillStyle = th.muted;
   ctx.font = `500 ${scaleFont(w, 22)}px Inter, system-ui, sans-serif`;
-  ctx.fillText(`Based on my real training${src}${sessions}`, cx, subY);
+  ctx.fillText(`Based on my real training${src}${sessions}${bw}`, cx, subY);
 }
 
 /* ---------- Hero card ---------- */
-async function drawHeroCard(ctx, fmt, th, pad, top, bottom, g) {
+async function drawHeroCard(ctx, fmt, th, pad, top, bottom, g, extra = {}) {
   const { w } = fmt;
   const cx = w / 2;
   const boxH = bottom - top;
@@ -464,7 +471,7 @@ function drawFooter(ctx, { w, h }, th, meta, watermark) {
   ctx.textBaseline = "alphabetic";
   ctx.fillStyle = th.muted;
   ctx.font = `600 ${scaleFont(w, 18)}px Inter, system-ui, sans-serif`;
-  ctx.fillText("hevy-ranks.pages.dev · open-source · not affiliated with Hevy", w / 2, h - Math.round(h * 0.035));
+  ctx.fillText("benjipy.github.io/hevy-ranks · open-source · not affiliated with Hevy", w / 2, h - Math.round(h * 0.035));
 }
 
 /* ---------- Primitives ---------- */

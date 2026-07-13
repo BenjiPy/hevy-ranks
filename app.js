@@ -23,6 +23,19 @@ const RANK_IMG = (tier) => `assets/ranks/${tier.img}`;
 // the new shell.
 const RESULTS_KEY = "hevy_results_html_v2";
 const VIEW_KEY = "hevy_view";
+/* Persist the raw compute result + meta as JSON so the share/export
+   modal still works after a hard refresh (previously the button
+   complained "Calculate your ranks first" because only the rendered
+   HTML was cached, not the underlying data the canvas renderer needs). */
+const RESULTS_DATA_KEY = "hevy_results_data_v1";
+
+/* Keep the raw `result + meta` pair around after render so the share
+   modal can rebuild the PNG at any resolution / theme without needing
+   to re-parse the CSV or re-hit the API. Declared at module top so
+   `restoreResults()` (called during boot) can rehydrate them from
+   sessionStorage without hitting a TDZ. */
+let lastRenderedResult = null;
+let lastRenderedMeta = null;
 const nf = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
 const fmt = (n) => nf.format(n);
 const TIER_DESC = [
@@ -684,11 +697,6 @@ document.addEventListener("click", (e) => {
 });
 
 /* ---------------- Render results ---------------- */
-/* Keep the raw `result + meta` pair around after render so the share
-   modal can rebuild the PNG at any resolution / theme without needing
-   to re-parse the CSV or re-hit the API. */
-let lastRenderedResult = null;
-let lastRenderedMeta = null;
 function render(result, meta) {
   lastRenderedResult = result;
   lastRenderedMeta = meta;
@@ -902,6 +910,18 @@ function persistResults() {
     // overwritten by a stale cached HTML fragment on restore.
     const content = document.getElementById("resultsContent");
     if (content) sessionStorage.setItem(RESULTS_KEY, content.innerHTML);
+
+    // Also persist the raw compute output so the share modal can rebuild
+    // a fresh PNG at any resolution after a reload. The result graph
+    // holds only plain data + references to constant tier/group objects,
+    // which JSON round-trips cleanly (renderExportCanvas reads them by
+    // property name, no identity check).
+    if (lastRenderedResult && lastRenderedMeta) {
+      sessionStorage.setItem(
+        RESULTS_DATA_KEY,
+        JSON.stringify({ result: lastRenderedResult, meta: lastRenderedMeta })
+      );
+    }
   } catch {
     /* storage unavailable (private mode, quota): keep in-DOM only */
   }
@@ -924,6 +944,21 @@ function restoreResults() {
     const content = document.getElementById("resultsContent");
     if (content) content.innerHTML = savedHtml;
     document.getElementById("resumeRow")?.classList.remove("hidden");
+
+    // Rehydrate the raw data so the share/export button doesn't
+    // complain about missing results after a hard refresh.
+    try {
+      const raw = sessionStorage.getItem(RESULTS_DATA_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.result && parsed?.meta) {
+          lastRenderedResult = parsed.result;
+          lastRenderedMeta = parsed.meta;
+        }
+      }
+    } catch {
+      /* Corrupted / stale JSON: ignore, user can recompute. */
+    }
   }
 
   /* Re-open the last view (skip transient/invalid ones). */
@@ -978,7 +1013,7 @@ const share = {
   format: "square",
   mode: "all",
   theme: "dark",
-  watermark: true,
+  hideBw: false,
   drawing: false,
   redrawQueued: false,
 };
@@ -1000,8 +1035,8 @@ function initShareModal() {
     queuePreview();
   });
 
-  document.getElementById("shareWatermark").addEventListener("change", (e) => {
-    share.watermark = e.target.checked;
+  document.getElementById("shareHideBw").addEventListener("change", (e) => {
+    share.hideBw = e.target.checked;
     queuePreview();
   });
 
@@ -1101,7 +1136,7 @@ async function drawPreview() {
     const canvas = await renderExportCanvas(
       lastRenderedResult,
       lastRenderedMeta,
-      { format: share.format, theme: share.theme, mode: share.mode, watermark: share.watermark }
+      { format: share.format, theme: share.theme, mode: share.mode, hideBw: share.hideBw }
     );
     const preview = document.getElementById("sharePreview");
     preview.width = canvas.width;
@@ -1129,7 +1164,7 @@ async function currentExportCanvas() {
     format: share.format,
     theme: share.theme,
     mode: share.mode,
-    watermark: share.watermark,
+    hideBw: share.hideBw,
   });
 }
 
@@ -1161,7 +1196,7 @@ async function handleNativeShare() {
     const data = {
       files: [file],
       title: "My Hevy Ranks",
-      text: "My strength ranks — hevy-ranks.pages.dev",
+      text: "My strength ranks — benjipy.github.io/hevy-ranks",
     };
     if (navigator.canShare && !navigator.canShare(data)) {
       setShareStatus("Sharing an image isn't supported here — download instead.");
