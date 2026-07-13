@@ -4,7 +4,26 @@ All notable changes to Hevy Ranks are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — targeting v0.3.1 (hotfix)
+## [0.4.0-pre1] — 2026-07-13
+
+Pre-release. Includes the v0.3.1 hotfix content on top of a full visual
+overhaul (glassmorphism design language).
+
+### Changed
+
+- **Design overhaul — glassmorphism.** The whole UI is rebuilt on a
+  frosted-glass system: translucent surfaces with real
+  `backdrop-filter` blur, thin luminous borders, an inset top
+  highlight that catches "light" like a real pane, and a new ambient
+  background made of four drifting colored radial blobs (blue /
+  purple / cyan / pink) that give the blur something rich to work
+  on. A single `--glass-*` token block drives every panel, card,
+  dropdown, input, toast, tooltip, badge and table, so the DA stays
+  uniform across all screens. Primary CTAs and the brand mark now
+  use a bluish-purple gradient with a colored ambient shadow.
+  Progressive-enhancement fallback for browsers without
+  `backdrop-filter` keeps text fully legible. Reduced-motion users
+  get the ambient blob drift disabled automatically.
 
 ### Added
 
