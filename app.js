@@ -7,30 +7,20 @@ import {
   RANK_TIERS,
   GROUPS,
 } from "./src/engine.js";
+import { LABELS_EN, REF_EN } from "./src/labels.js";
+import {
+  EXPORT_FORMATS,
+  EXPORT_THEMES,
+  EXPORT_MODES,
+  renderExportCanvas,
+  canvasToShareFile,
+} from "./src/export.js";
 
 const RANK_IMG = (tier) => `assets/ranks/${tier.img}`;
 const RESULTS_KEY = "hevy_results_html";
 const VIEW_KEY = "hevy_view";
 const nf = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
 const fmt = (n) => nf.format(n);
-
-/* Display names used in the web UI (kept separate from engine labels). */
-const LABELS_EN = {
-  legs: "Legs",
-  chest: "Chest",
-  back: "Back",
-  shoulders: "Shoulders",
-  arms: "Arms",
-  core: "Core",
-};
-const REF_EN = {
-  legs: "Squat",
-  chest: "Bench press",
-  back: "Barbell row",
-  shoulders: "Overhead press",
-  arms: "Barbell curl",
-  core: "Weighted crunch",
-};
 const TIER_DESC = [
   "Just getting started.",
   "Building a base.",
@@ -690,7 +680,14 @@ document.addEventListener("click", (e) => {
 });
 
 /* ---------------- Render results ---------------- */
+/* Keep the raw `result + meta` pair around after render so the share
+   modal can rebuild the PNG at any resolution / theme without needing
+   to re-parse the CSV or re-hit the API. */
+let lastRenderedResult = null;
+let lastRenderedMeta = null;
 function render(result, meta) {
+  lastRenderedResult = result;
+  lastRenderedMeta = meta;
   const groups = Object.values(result.groups);
   const withData = groups.filter((g) => g.hasData);
 
@@ -960,3 +957,243 @@ function buildRanksPage() {
     "</tbody>";
   document.getElementById("thresholdTable").innerHTML = head + body;
 }
+
+/* ---------------- Share / PNG export modal ----------------
+   Wires the UI in `#shareModal` to the pure-canvas renderer in
+   `src/export.js`. Preview is redrawn on any option change; the
+   final PNG is exported at full 1080/1920 resolution. Web Share
+   API (files) and Clipboard.write() are feature-detected and
+   shown only when supported. */
+const share = {
+  format: "square",
+  mode: "all",
+  theme: "dark",
+  watermark: true,
+  drawing: false,
+  redrawQueued: false,
+};
+
+function initShareModal() {
+  const modal = document.getElementById("shareModal");
+  if (!modal) return;
+
+  buildShareToggle("shareFormat", EXPORT_FORMATS, share.format, (k) => {
+    share.format = k;
+    queuePreview();
+  });
+  buildShareToggle("shareMode", EXPORT_MODES, share.mode, (k) => {
+    share.mode = k;
+    queuePreview();
+  });
+  buildShareToggle("shareTheme", EXPORT_THEMES, share.theme, (k) => {
+    share.theme = k;
+    queuePreview();
+  });
+
+  document.getElementById("shareWatermark").addEventListener("change", (e) => {
+    share.watermark = e.target.checked;
+    queuePreview();
+  });
+
+  document.getElementById("shareBtn")?.addEventListener("click", openShareModal);
+  modal.addEventListener("click", (e) => {
+    if (e.target.closest("[data-close-share]")) closeShareModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !modal.classList.contains("hidden")) {
+      closeShareModal();
+    }
+  });
+
+  document.getElementById("shareDownload").addEventListener("click", handleDownload);
+  document.getElementById("shareNative").addEventListener("click", handleNativeShare);
+  document.getElementById("shareCopy").addEventListener("click", handleCopy);
+
+  // Show extra actions only if the platform supports them. Web Share
+  // Level 2 with files is mobile-first; ClipboardItem is on evergreen
+  // desktops.
+  if (typeof navigator.share === "function") {
+    document.getElementById("shareNative").hidden = false;
+  }
+  if (typeof ClipboardItem === "function" && navigator.clipboard?.write) {
+    document.getElementById("shareCopy").hidden = false;
+  }
+}
+
+function buildShareToggle(id, options, initial, onChange) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = "";
+  for (const [key, meta] of Object.entries(options)) {
+    const label = meta.short ?? meta.label ?? key;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "share-opt";
+    btn.dataset.key = key;
+    btn.setAttribute("role", "radio");
+    btn.setAttribute("aria-checked", key === initial ? "true" : "false");
+    btn.title = meta.label ?? label;
+    btn.textContent = label;
+    btn.addEventListener("click", () => {
+      for (const other of el.querySelectorAll(".share-opt")) {
+        other.setAttribute("aria-checked", other === btn ? "true" : "false");
+      }
+      onChange(key);
+    });
+    el.appendChild(btn);
+  }
+}
+
+function openShareModal() {
+  if (!lastRenderedResult) {
+    showToast("Calculate your ranks first.");
+    return;
+  }
+  // On small viewports the portrait format reads best by default.
+  if (window.matchMedia("(max-width: 640px)").matches) {
+    share.format = "portrait";
+    syncToggle("shareFormat", "portrait");
+  }
+  const modal = document.getElementById("shareModal");
+  modal.classList.remove("hidden");
+  document.body.classList.add("no-scroll");
+  queuePreview();
+}
+
+function closeShareModal() {
+  document.getElementById("shareModal").classList.add("hidden");
+  document.body.classList.remove("no-scroll");
+  setShareStatus("");
+}
+
+function syncToggle(id, key) {
+  const el = document.getElementById(id);
+  for (const btn of el.querySelectorAll(".share-opt")) {
+    btn.setAttribute("aria-checked", btn.dataset.key === key ? "true" : "false");
+  }
+}
+
+/* Coalesce rapid consecutive option changes into a single redraw so
+   we never flood the main thread with in-flight image loads. */
+function queuePreview() {
+  if (share.drawing) {
+    share.redrawQueued = true;
+    return;
+  }
+  drawPreview();
+}
+
+async function drawPreview() {
+  if (!lastRenderedResult) return;
+  share.drawing = true;
+  setShareHint("Building preview…");
+  try {
+    const canvas = await renderExportCanvas(
+      lastRenderedResult,
+      lastRenderedMeta,
+      { format: share.format, theme: share.theme, mode: share.mode, watermark: share.watermark }
+    );
+    const preview = document.getElementById("sharePreview");
+    preview.width = canvas.width;
+    preview.height = canvas.height;
+    preview.getContext("2d").drawImage(canvas, 0, 0);
+    // The <canvas> element's intrinsic size sets its aspect ratio in
+    // CSS-land, so the preview frame naturally re-shapes for each format.
+    setShareHint(
+      `${canvas.width} × ${canvas.height} · ${EXPORT_FORMATS[share.format].short}`
+    );
+  } catch (err) {
+    console.error(err);
+    setShareHint("Failed to build preview.");
+  } finally {
+    share.drawing = false;
+    if (share.redrawQueued) {
+      share.redrawQueued = false;
+      drawPreview();
+    }
+  }
+}
+
+async function currentExportCanvas() {
+  return renderExportCanvas(lastRenderedResult, lastRenderedMeta, {
+    format: share.format,
+    theme: share.theme,
+    mode: share.mode,
+    watermark: share.watermark,
+  });
+}
+
+async function handleDownload() {
+  try {
+    setShareStatus("Preparing PNG…");
+    const canvas = await currentExportCanvas();
+    const blob = await new Promise((res) => canvas.toBlob(res, "image/png"));
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = shareFilename();
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    setShareStatus("Saved to your downloads.");
+  } catch (e) {
+    console.error(e);
+    setShareStatus("Couldn't save the PNG — try again.");
+  }
+}
+
+async function handleNativeShare() {
+  try {
+    setShareStatus("Preparing share…");
+    const canvas = await currentExportCanvas();
+    const file = await canvasToShareFile(canvas, shareFilename());
+    const data = {
+      files: [file],
+      title: "My Hevy Ranks",
+      text: "My strength ranks — hevy-ranks.pages.dev",
+    };
+    if (navigator.canShare && !navigator.canShare(data)) {
+      setShareStatus("Sharing an image isn't supported here — download instead.");
+      return;
+    }
+    await navigator.share(data);
+    setShareStatus("Shared!");
+  } catch (e) {
+    if (e?.name === "AbortError") {
+      setShareStatus("");
+      return;
+    }
+    console.error(e);
+    setShareStatus("Couldn't share — try downloading and sharing manually.");
+  }
+}
+
+async function handleCopy() {
+  try {
+    setShareStatus("Copying…");
+    const canvas = await currentExportCanvas();
+    const blob = await new Promise((res) => canvas.toBlob(res, "image/png"));
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+    setShareStatus("Image copied to clipboard.");
+  } catch (e) {
+    console.error(e);
+    setShareStatus("Clipboard copy failed — try downloading instead.");
+  }
+}
+
+function shareFilename() {
+  const stamp = new Date().toISOString().slice(0, 10);
+  return `hevy-ranks-${share.format}-${stamp}.png`;
+}
+function setShareHint(msg) {
+  const el = document.getElementById("sharePreviewHint");
+  if (el) el.textContent = msg;
+}
+function setShareStatus(msg) {
+  const el = document.getElementById("shareStatus");
+  if (el) el.textContent = msg;
+}
+
+initShareModal();
+

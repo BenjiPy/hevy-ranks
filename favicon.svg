@@ -1,10 +1,46 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Hevy Ranks">
-  <rect width="64" height="64" rx="15" fill="#6c8cff" />
-  <g fill="#0a0b0d">
-    <rect x="26" y="29.5" width="12" height="5" rx="2.5" />
-    <rect x="20" y="23" width="6" height="18" rx="2.5" />
-    <rect x="38" y="23" width="6" height="18" rx="2.5" />
-    <rect x="13" y="26" width="5" height="12" rx="2.5" />
-    <rect x="46" y="26" width="5" height="12" rx="2.5" />
+  <defs>
+    <!-- Main shield gradient (matches the app accent, blue -> violet). -->
+    <linearGradient id="hr-shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7aa2ff"/>
+      <stop offset="100%" stop-color="#b088ff"/>
+    </linearGradient>
+    <!-- Top highlight so the shield reads as slightly glassy / bevelled. -->
+    <linearGradient id="hr-shine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="55%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <!-- Soft inner drop shadow to lift the emblem off flat backgrounds. -->
+    <radialGradient id="hr-glow" cx="50%" cy="35%" r="60%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Shield silhouette: flat top, curved pointed bottom. Rendered twice
+       (fill + highlight) so we get depth without needing filters. -->
+  <path d="M32 3 L60 11 V33 C60 46 48 57 32 62 C16 57 4 46 4 33 V11 Z"
+        fill="url(#hr-shield)"/>
+  <path d="M32 3 L60 11 V33 C60 46 48 57 32 62 C16 57 4 46 4 33 V11 Z"
+        fill="url(#hr-shine)"/>
+  <path d="M32 3 L60 11 V33 C60 46 48 57 32 62 C16 57 4 46 4 33 V11 Z"
+        fill="url(#hr-glow)"/>
+
+  <!-- Rank chevron (the "up" arrow), centered on the top half. -->
+  <path d="M32 15 L45 26 L41 29 L32 22 L23 29 L19 26 Z"
+        fill="#0a0b1a"/>
+
+  <!-- Barbell, centered on the bottom half.
+       Structured: bar + inner big plates + outer small plates. -->
+  <g fill="#0a0b1a">
+    <rect x="16" y="42" width="32" height="4"  rx="2"/>
+    <rect x="14" y="37" width="4"  height="14" rx="1.5"/>
+    <rect x="46" y="37" width="4"  height="14" rx="1.5"/>
+    <rect x="10" y="40" width="3"  height="8"  rx="1"/>
+    <rect x="51" y="40" width="3"  height="8"  rx="1"/>
   </g>
+
+  <!-- Crisp inner edge so the emblem stays legible at 16-32px favicon size. -->
+  <path d="M32 3 L60 11 V33 C60 46 48 57 32 62 C16 57 4 46 4 33 V11 Z"
+        fill="none" stroke="#ffffff" stroke-opacity="0.22" stroke-width="1"/>
 </svg>

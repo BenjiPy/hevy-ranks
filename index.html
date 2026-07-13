@@ -9,6 +9,10 @@
       content="Turn your Hevy workouts into a strength rank per muscle group. Open-source, non-profit."
     />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <!-- Apple / legacy fallback: same SVG works as an apple-touch-icon on
+         modern iOS; Android Chrome uses it for the PWA install prompt. -->
+    <link rel="apple-touch-icon" href="favicon.svg" />
+    <meta name="theme-color" content="#7aa2ff" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -22,8 +26,8 @@
     <canvas id="confetti" class="confetti-canvas" aria-hidden="true"></canvas>
 
     <header class="site-header">
-      <button class="brand" data-goto="landing">
-        <span class="brand-mark">HR</span>
+      <button class="brand" data-goto="landing" aria-label="Hevy Ranks — home">
+        <img class="brand-mark" src="favicon.svg" alt="" aria-hidden="true" width="34" height="34" />
         <span class="brand-name">Hevy<span class="accent">Ranks</span></span>
       </button>
       <nav class="header-links">
@@ -198,6 +202,14 @@
       <div class="results-head">
         <button class="back" data-goto="landing">← New calculation</button>
         <div class="results-meta" id="resultsMeta"></div>
+        <button
+          class="btn btn-primary btn-share"
+          id="shareBtn"
+          type="button"
+          aria-haspopup="dialog"
+        >
+          <span aria-hidden="true">📤</span> Share as image
+        </button>
       </div>
 
       <div id="localeNotice" class="locale-notice hidden"></div>
@@ -511,6 +523,71 @@
         </div>
       </div>
     </section>
+
+    <!-- ======================= SHARE / EXPORT MODAL ======================= -->
+    <div
+      id="shareModal"
+      class="modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="shareTitle"
+    >
+      <div class="modal-backdrop" data-close-share></div>
+      <div class="modal-card share-card" role="document">
+        <button
+          class="modal-close"
+          type="button"
+          aria-label="Close"
+          data-close-share
+        >×</button>
+        <h2 id="shareTitle">Share your ranks</h2>
+        <p class="modal-sub">
+          Generate a PNG you can share on Instagram, X, Discord or
+          anywhere else. Nothing leaves your device.
+        </p>
+
+        <div class="share-grid">
+          <div class="share-preview">
+            <div class="share-preview-frame">
+              <canvas id="sharePreview" aria-label="Preview of the exported image"></canvas>
+            </div>
+            <p class="share-preview-hint" id="sharePreviewHint">Building preview…</p>
+          </div>
+
+          <div class="share-options">
+            <div class="share-field">
+              <span class="share-field-label">Format</span>
+              <div class="share-toggle" id="shareFormat" role="radiogroup" aria-label="Image format"></div>
+            </div>
+            <div class="share-field">
+              <span class="share-field-label">Content</span>
+              <div class="share-toggle" id="shareMode" role="radiogroup" aria-label="Content mode"></div>
+            </div>
+            <div class="share-field">
+              <span class="share-field-label">Theme</span>
+              <div class="share-toggle" id="shareTheme" role="radiogroup" aria-label="Color theme"></div>
+            </div>
+            <label class="share-check">
+              <input type="checkbox" id="shareWatermark" checked />
+              <span>Show "hevy-ranks" watermark</span>
+            </label>
+
+            <div class="share-actions">
+              <button class="btn btn-primary" id="shareDownload" type="button">
+                <span aria-hidden="true">⬇</span> Download PNG
+              </button>
+              <button class="btn btn-ghost" id="shareNative" type="button" hidden>
+                <span aria-hidden="true">📤</span> Share…
+              </button>
+              <button class="btn btn-ghost" id="shareCopy" type="button" hidden>
+                <span aria-hidden="true">📋</span> Copy image
+              </button>
+            </div>
+            <p class="share-status" id="shareStatus" aria-live="polite"></p>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div id="toast" class="toast hidden"></div>
 

@@ -4,6 +4,38 @@ All notable changes to Hevy Ranks are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] — 2026-07-13
+
+Final release of the v0.3 line — adds the two most-requested community
+features (share-as-image + dedicated privacy page) plus a proper brand
+identity, then hands over to v0.4 for the design overhaul.
+
+### Added
+
+- **New logo & favicon.** Replaced the plain "HR" square with a
+  proper shield emblem (blue → violet gradient) featuring a chevron
+  (rank-up) above a stylized barbell — same SVG serves as favicon,
+  Apple touch icon and header brand mark. Ties the brand directly
+  to the two things the app is about: ranks + strength. New
+  `theme-color` meta for mobile browser chrome.
+- **"Share as image" export (PNG).** New button on the results page
+  opens a modal with a live canvas preview and one-click PNG
+  download. Options: **3 formats** (square 1080×1080 for Instagram,
+  portrait 1080×1920 for stories, landscape 1920×1080 for Twitter/
+  desktop), **3 themes** (Midnight / Daylight / Vaporwave),
+  **3 content modes** (best rank only / all groups grid / all groups
+  with details), optional watermark. Rendered from scratch on a 2D
+  canvas — zero external dependency, works offline, everything stays
+  in the browser. On mobile, defaults to the portrait format and
+  exposes the native **Web Share sheet** so users can drop the image
+  straight into Instagram / Discord / X. On desktop, also exposes a
+  **Copy image** action for browsers with `ClipboardItem`.
+- **Dedicated "Your data" page** (`#privacy`) reachable from the
+  header, the footer and both setup panels. Covers CSV mode, API-key
+  mode, browser-storage contents, third parties (Hevy API + GitHub
+  Pages, honestly listed), how to wipe everything, and how to verify
+  the claims via the network tab.
+
 ## [0.3.1] — 2026-07-13
 
 Hotfix release. Two related correctness fixes triggered by community

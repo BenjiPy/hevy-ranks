@@ -1,6 +1,6 @@
 {
   "name": "hevy-ranks",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Turn your Hevy workouts into a strength rank per muscle group (web + CLI). Open-source, non-profit.",
   "type": "module",
   "bin": {
