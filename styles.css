@@ -1429,6 +1429,43 @@ table.thresholds tbody tr:last-child td {
   margin: 40px 0 0;
 }
 
+/* ---------- Privacy page ---------- */
+/* Trust badges displayed as a row of pills right below the intro,
+   summarising the privacy stance at a glance. */
+.privacy-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin: 26px 0 8px;
+}
+.pv-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+/* Footer button styled to blend with the surrounding <a> links so the
+   "Your data" entry sits naturally alongside "Changelog" / "GitHub". */
+.footer-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+}
+.footer-link:hover {
+  color: var(--text);
+}
+
 /* ---------- Toast ---------- */
 .toast {
   position: fixed;
