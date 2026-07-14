@@ -1,22 +1,48 @@
 :root {
-  --bg: #08090b;
-  --bg-2: #0d0f12;
-  --surface: #121419;
-  --surface-2: #171a20;
-  --surface-3: #1c2028;
-  --line: #23272f;
-  --line-soft: #191c22;
+  /* Base palette — deeper, richer bg so the ambient blobs read well. */
+  --bg: #060714;
+  --bg-2: #0a0d1c;
+  /* Legacy opaque surface tokens kept for a handful of non-glass elements
+     (rank tooltips, some borders, native fallbacks). Everything visual now
+     goes through the glass tokens below. */
+  --surface: rgba(22, 26, 40, 0.55);
+  --surface-2: rgba(30, 34, 50, 0.5);
+  --surface-3: rgba(255, 255, 255, 0.06);
+  --line: rgba(255, 255, 255, 0.09);
+  --line-soft: rgba(255, 255, 255, 0.05);
   --text: #f3f5f9;
-  --muted: #8b93a2;
-  --muted-2: #5c6472;
-  --accent: #6c8cff;
-  --accent-strong: #7d99ff;
-  --accent-soft: rgba(108, 140, 255, 0.14);
+  --muted: #a2acc0;
+  --muted-2: #6c7690;
+  --accent: #7aa2ff;
+  --accent-strong: #a4bdff;
+  --accent-soft: rgba(122, 162, 255, 0.16);
   --danger: #ff5c7a;
   --ok: #38d39f;
   --radius: 16px;
   --radius-lg: 22px;
-  --shadow: 0 24px 60px -30px rgba(0, 0, 0, 0.9);
+
+  /* ---------- Glassmorphism system ---------- */
+  /* Translucent surfaces (used as `background` on cards).            */
+  --glass-bg:        rgba(22, 26, 40, 0.42);   /* default card       */
+  --glass-bg-strong: rgba(22, 26, 40, 0.62);   /* nested / on top of glass */
+  --glass-bg-soft:   rgba(255, 255, 255, 0.04); /* subtle chips      */
+  --glass-bg-hover:  rgba(255, 255, 255, 0.06);
+  /* Glass edges. First value is the visible outline, second is the
+     inset top shine that reads as light bouncing off the top edge. */
+  --glass-border:        1px solid rgba(255, 255, 255, 0.10);
+  --glass-border-strong: 1px solid rgba(255, 255, 255, 0.16);
+  --glass-highlight:     inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  /* Blur radii. Elevated cards get the stronger blur, floating menus
+     get an even stronger one. Fallback for browsers without support:
+     the translucent bg still renders (a bit murkier). */
+  --glass-blur:      blur(18px) saturate(140%);
+  --glass-blur-soft: blur(10px) saturate(120%);
+  --glass-blur-lg:   blur(28px) saturate(150%);
+  /* Composite shadows that read as depth under a floating card. */
+  --glass-shadow:    0 20px 50px -22px rgba(0, 0, 0, 0.75);
+  --glass-shadow-lg: 0 30px 70px -20px rgba(0, 0, 0, 0.85);
+  /* Legacy shadow token (still referenced in a few places). */
+  --shadow: var(--glass-shadow);
 }
 
 * {
@@ -36,18 +62,122 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Ambient background: several colored radial blobs that give the
+   backdrop filter something rich to blur against. Fixed to the
+   viewport so it never scrolls with content, z-index -1 so all
+   glass cards stay above it. */
 .bg-glow {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background: radial-gradient(
-      60% 40% at 50% -10%,
-      rgba(108, 140, 255, 0.1),
-      transparent 65%
-    ),
-    var(--bg);
   pointer-events: none;
+  background:
+    radial-gradient(38vw 30vw at 12% 8%,   rgba(122, 162, 255, 0.30), transparent 65%),
+    radial-gradient(42vw 34vw at 88% 18%,  rgba(191, 122, 255, 0.28), transparent 65%),
+    radial-gradient(46vw 40vw at 72% 92%,  rgba(72, 210, 255, 0.22), transparent 65%),
+    radial-gradient(40vw 32vw at 8% 82%,   rgba(255, 122, 176, 0.22), transparent 65%),
+    radial-gradient(60vw 60vw at 50% 50%,  rgba(20, 24, 44, 0.35), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
+  animation: bgDrift 40s ease-in-out infinite alternate;
 }
+@keyframes bgDrift {
+  0%   { background-position: 0% 0%, 100% 0%, 100% 100%, 0% 100%, 50% 50%, 0 0; }
+  100% { background-position: 6% 4%, 94% 6%, 96% 96%, 4% 94%, 50% 50%, 0 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bg-glow { animation: none; }
+}
+/* ---------- Glassmorphism ----------
+   Tokens above already made every `--surface` and `--line` translucent,
+   so the existing rules automatically pick up the glass look. What's
+   added below is what makes it truly *glass*: the backdrop-filter blur
+   (so content behind is optically distorted) and the inset top
+   highlight (so the edge catches "light" as if it were a real pane).
+   All main surfaces share the same mixin so the DA stays uniform. */
+.glass,
+.panel,
+.overview,
+.groups,
+.unmatched-list,
+.tier-cell,
+.steps li,
+.formula,
+.table-wrap,
+.select-btn,
+.dropzone,
+.field input,
+.field select,
+.btn-ghost,
+.locale-notice,
+.panel-note,
+.grow-detail-panel .capped-note,
+.grow-detail-panel .reco {
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
+}
+/* Floating layers (dropdowns, toast, custom rank tooltip) — stronger
+   blur so what shows through clearly reads as "behind glass". */
+.select-list,
+.toast,
+.rs-item::before {
+  -webkit-backdrop-filter: var(--glass-blur-lg);
+  backdrop-filter: var(--glass-blur-lg);
+  box-shadow: var(--glass-highlight), var(--glass-shadow-lg);
+}
+/* Form controls: their base rules still reference the opaque `--bg-2`.
+   Override to a soft glass tint so they blend into the parent panel. */
+.select-btn,
+.field input,
+.field select,
+.checkbox input[type="checkbox"] {
+  background: var(--glass-bg-soft);
+}
+/* Dropdown listbox floats on top of a glass panel — use the stronger
+   tint so its own contents are readable over whatever's behind. */
+.select-list {
+  background: var(--glass-bg-strong);
+}
+/* Accordion detail nested inside a `.groups` glass card: a lighter
+   tint is enough (no need for its own backdrop-filter, which would
+   stack blur and look muddy). */
+.grow-detail-panel {
+  background: var(--glass-bg-soft) !important;
+}
+/* Row hover / open states — replace the opaque `--surface-2` with
+   a translucent white so it reads as "highlight on glass". */
+.grow-row:hover,
+.grow-row[aria-expanded="true"] {
+  background: var(--glass-bg-hover) !important;
+}
+
+/* Progressive-enhancement fallback: browsers without backdrop-filter
+   (older Firefox, some in-app WebViews) fall back to a near-opaque
+   surface so text remains readable. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass,
+  .panel,
+  .overview,
+  .groups,
+  .unmatched-list,
+  .tier-cell,
+  .steps li,
+  .formula,
+  .table-wrap,
+  .select-list,
+  .select-btn,
+  .dropzone,
+  .field input,
+  .field select,
+  .btn-ghost,
+  .toast,
+  .locale-notice,
+  .panel-note {
+    background: rgba(18, 22, 34, 0.92);
+  }
+}
+
 /* Full-viewport overlay for the results-reveal confetti burst.
    pointer-events:none so it never blocks UI interactions. */
 .confetti-canvas {
@@ -260,14 +390,26 @@ input[type="number"]::-webkit-inner-spin-button {
   border: none;
   color: var(--text);
 }
-/* Header brand mark — now an inline SVG shield emblem (see favicon.svg).
-   The SVG carries its own gradient + highlight, so this rule only sets
-   the display size and a subtle drop shadow for depth on the header. */
+/* Header brand mark — inline SVG shield emblem sitting inside a
+   subtle glass chip so the logo picks up the same frosted language as
+   the rest of the UI (thin luminous border, top highlight, gentle
+   backdrop blur behind the SVG). Padding acts as the glass pane
+   around the icon. */
 .brand-mark {
   width: 34px;
   height: 34px;
   display: block;
-  filter: drop-shadow(0 4px 10px rgba(122, 162, 255, 0.35));
+  padding: 5px;
+  box-sizing: content-box;
+  border-radius: 12px;
+  background: var(--glass-bg-soft);
+  border: var(--glass-border);
+  -webkit-backdrop-filter: var(--glass-blur-soft);
+  backdrop-filter: var(--glass-blur-soft);
+  box-shadow:
+    var(--glass-highlight),
+    0 6px 16px -8px rgba(122, 162, 255, 0.45);
+  filter: drop-shadow(0 3px 8px rgba(122, 162, 255, 0.35));
 }
 .header-links {
   display: flex;
@@ -377,26 +519,26 @@ input[type="number"]::-webkit-inner-spin-button {
   content: attr(data-tip);
   padding: 6px 10px;
   border-radius: 8px;
-  background: #0e1220;
-  border: 1px solid var(--tip-color, var(--line));
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--tip-color, rgba(255, 255, 255, 0.14));
   color: var(--tip-color, var(--text));
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.4px;
   text-transform: uppercase;
   white-space: nowrap;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.55),
-    0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 .rs-item::after {
   content: "";
   bottom: calc(100% + 4px);
   width: 8px;
   height: 8px;
-  background: #0e1220;
-  border-right: 1px solid var(--tip-color, var(--line));
-  border-bottom: 1px solid var(--tip-color, var(--line));
+  background: var(--glass-bg-strong);
+  border-right: 1px solid var(--tip-color, rgba(255, 255, 255, 0.14));
+  border-bottom: 1px solid var(--tip-color, rgba(255, 255, 255, 0.14));
   transform: translate(-50%, 4px) rotate(45deg);
+  -webkit-backdrop-filter: var(--glass-blur-lg);
+  backdrop-filter: var(--glass-blur-lg);
 }
 .rs-item:hover::before,
 .rs-item:focus-visible::before {
@@ -454,12 +596,18 @@ input[type="number"]::-webkit-inner-spin-button {
   transform: translateY(1px);
 }
 .btn-primary {
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent) 0%, #b088ff 100%);
   color: #0a0b0d;
   font-weight: 700;
+  box-shadow:
+    0 12px 28px -14px rgba(122, 162, 255, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 .btn-primary:hover {
   filter: brightness(1.08);
+  box-shadow:
+    0 18px 36px -14px rgba(122, 162, 255, 0.75),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 .btn-ghost {
   background: var(--surface-2);
@@ -1389,14 +1537,14 @@ table.thresholds td {
   white-space: nowrap;
 }
 table.thresholds thead th {
-  background: var(--surface-2);
+  background: var(--glass-bg-soft);
   color: var(--muted);
   font-weight: 600;
   font-size: 12px;
 }
 table.thresholds tbody th {
   text-align: left;
-  background: var(--surface);
+  background: transparent;
 }
 table.thresholds .grp {
   font-weight: 700;
@@ -1497,9 +1645,9 @@ table.thresholds tbody tr:last-child td {
 .modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(4, 6, 12, 0.72);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgba(4, 6, 12, 0.55);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  backdrop-filter: blur(10px) saturate(120%);
 }
 .modal-card {
   position: relative;
@@ -1508,11 +1656,13 @@ table.thresholds tbody tr:last-child td {
   width: 100%;
   max-height: min(92vh, 900px);
   overflow: auto;
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--glass-bg);
+  border: var(--glass-border-strong);
   border-radius: var(--radius-lg);
   padding: clamp(20px, 3vw, 32px);
-  box-shadow: var(--shadow);
+  -webkit-backdrop-filter: var(--glass-blur-lg);
+  backdrop-filter: var(--glass-blur-lg);
+  box-shadow: var(--glass-highlight), var(--glass-shadow-lg);
 }
 .modal-close {
   position: absolute;
@@ -1569,9 +1719,12 @@ table.thresholds tbody tr:last-child td {
   width: 100%;
   max-width: 420px;
   padding: 8px;
-  background: var(--bg-2);
-  border: 1px solid var(--line);
+  background: var(--glass-bg-soft);
+  border: var(--glass-border);
   border-radius: 14px;
+  -webkit-backdrop-filter: var(--glass-blur-soft);
+  backdrop-filter: var(--glass-blur-soft);
+  box-shadow: var(--glass-highlight);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1619,20 +1772,27 @@ table.thresholds tbody tr:last-child td {
 .share-opt {
   padding: 8px 12px;
   border-radius: 10px;
-  border: 1px solid var(--line);
-  background: var(--bg-2);
+  border: var(--glass-border);
+  background: var(--glass-bg-soft);
   color: var(--muted);
   font: inherit;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  -webkit-backdrop-filter: var(--glass-blur-soft);
+  backdrop-filter: var(--glass-blur-soft);
   transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
 }
-.share-opt:hover { color: var(--text); border-color: var(--muted-2); }
+.share-opt:hover {
+  color: var(--text);
+  background: var(--glass-bg-hover);
+  border-color: rgba(255, 255, 255, 0.18);
+}
 .share-opt[aria-checked="true"] {
   color: var(--text);
   background: var(--accent-soft);
   border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(122, 162, 255, 0.25);
 }
 .share-check {
   display: flex;
