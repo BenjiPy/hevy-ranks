@@ -7,8 +7,8 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.4.0-pre1] — 2026-07-14
 
 Pre-release. Full visual overhaul (glassmorphism design language) on
-top of every v0.3.2 feature (share-as-image, dedicated privacy page,
-new brand identity) and every v0.3.1 hotfix (multilingual catalog,
+top of every v0.3.2 feature (share-as-image + dedicated privacy page +
+new brand identity) and every v0.3.1 hotfix (multilingual catalog +
 assisted-machine bodyweight fix).
 
 ### Changed
@@ -21,11 +21,29 @@ assisted-machine bodyweight fix).
   purple / cyan / pink) that give the blur something rich to work
   on. A single `--glass-*` token block drives every panel, card,
   dropdown, input, toast, tooltip, badge and table, so the DA stays
-  uniform across all screens. Primary CTAs and the brand mark now
-  use a bluish-purple gradient with a colored ambient shadow.
-  Progressive-enhancement fallback for browsers without
-  `backdrop-filter` keeps text fully legible. Reduced-motion users
-  get the ambient blob drift disabled automatically.
+  uniform across all screens. Primary CTAs use a bluish-purple
+  gradient with a colored ambient shadow. Progressive-enhancement
+  fallback for browsers without `backdrop-filter` keeps text fully
+  legible. Reduced-motion users get the ambient blob drift disabled
+  automatically.
+- **Brand mark on glass.** The new v0.3.2 SVG shield sits inside a
+  soft glass chip (backdrop-blur + luminous border + top highlight +
+  bluish drop shadow), so the header logo picks up the same frosted
+  language as the rest of the UI instead of floating on a flat
+  background.
+- **Share modal on glass.** The "Share with your friends" modal,
+  introduced in v0.3.2 as a flat surface, is now migrated to the
+  glass tokens: card uses `--glass-bg` + `--glass-blur-lg` + long
+  shadow, backdrop has a real 10 px blur, the preview frame is a
+  soft glass chip, and the format / content / theme pills follow the
+  same hover-fade + luminous-border language as the rest of the UI.
+
+### Notes
+
+- This is a **pre-release** (`-pre1`). Expect glass regressions on
+  browsers without `backdrop-filter` support — the fallback keeps
+  everything readable but loses the frosted feel. Broader fallback
+  work will land before v0.4.0 stable.
 
 ## [0.3.2] — 2026-07-13
 
