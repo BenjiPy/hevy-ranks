@@ -295,15 +295,21 @@ async function drawHeroCard(ctx, fmt, th, pad, top, bottom, g, extra = {}) {
   // portrait looks premium centered, not stretched.
   const fit = Math.min(1, availableH / rawContentH);
 
+  // Round every size that ends up injected into a `font` string —
+  // otherwise decimals like "28.798px" break the badge/letter-spacing
+  // regexes that only match `\d+px` and end up parsing the WRONG
+  // trailing number (e.g. "798px" instead of "28px" → 800px-tall pill
+  // rendered as a giant orange band across the canvas). Gaps and pad
+  // stay unrounded — Canvas handles subpixel positioning fine.
   const emblemSize      = rawEmblem      * fit;
   const gapEmblemToText = rawGapEmToT    * fit;
-  const titleSize       = rawTitle       * fit;
+  const titleSize       = Math.round(rawTitle * fit);
   const gapTitleToBadge = rawGapTToB     * fit;
-  const badgeFontSize   = scaleFont(w, 34) * fit;
+  const badgeFontSize   = Math.round(scaleFont(w, 34) * fit);
   const gapBadgeToComp  = rawGapBToC     * fit;
-  const compSize        = rawComp        * fit;
+  const compSize        = Math.round(rawComp * fit);
   const gapCompToTop    = rawGapCToTop   * fit;
-  const topLiftFontSize = scaleFont(w, 20) * fit;
+  const topLiftFontSize = Math.round(scaleFont(w, 20) * fit);
   const innerPad        = rawInnerPad    * fit;
 
   const contentH = rawContentH * fit;
@@ -431,7 +437,9 @@ function drawTierBadge(ctx, cx, cy, text, font, color, th) {
   const m = ctx.measureText(text);
   const padX = Math.max(24, m.width * 0.15);
   const padY = 14;
-  const size = parseInt(font.match(/(\d+)px/)?.[1] ?? "32", 10);
+  // Match integer OR decimal font sizes; parse to a rounded int for
+  // pixel math (parseInt("28.7", 10) → 28, safe fallback).
+  const size = parseInt(font.match(/(\d+(?:\.\d+)?)px/)?.[1] ?? "32", 10);
   const w = m.width + padX * 2;
   const h = size + padY * 2;
   const x = cx - w / 2;
@@ -473,7 +481,7 @@ function drawText(ctx, text, x, y, spacingEm = 0) {
     ctx.fillText(text, x, y);
     return;
   }
-  const size = parseInt(ctx.font.match(/(\d+)px/)?.[1] ?? "16", 10);
+  const size = parseInt(ctx.font.match(/(\d+(?:\.\d+)?)px/)?.[1] ?? "16", 10);
   const spacing = size * spacingEm;
   const widths = [...text].map((c) => ctx.measureText(c).width + spacing);
   const total = widths.reduce((a, b) => a + b, 0) - spacing;
