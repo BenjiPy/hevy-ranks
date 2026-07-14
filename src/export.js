@@ -255,47 +255,61 @@ function drawHeader(ctx, { w, h }, th, pad, meta, result, extra = {}) {
 
 /* ---------- Hero card ---------- */
 async function drawHeroCard(ctx, fmt, th, pad, top, bottom, g, extra = {}) {
-  const { w } = fmt;
-  const cx = w / 2;
+  const { w, h } = fmt;
   const availableH = bottom - top;
+
+  // For very wide formats (landscape 16:9), the vertical stack has
+  // to shrink so aggressively that the emblem looks lonely in a huge
+  // canvas. Switch to a side-by-side layout where the emblem sits
+  // left and the text stacks right — natural fit for the aspect.
+  if (w > h * 1.2) {
+    await drawHeroSideBySide(ctx, fmt, th, pad, top, bottom, g);
+    void extra;
+    return;
+  }
+
+  const cx = w / 2;
   const boxW = w - pad * 2;
 
-  // Size the emblem from WIDTH (not the leftover height), so short
-  // landscapes don't get a tiny logo and tall portraits don't leave a
-  // huge empty band under a normal-sized card.
-  const emblemSize = Math.min(boxW * 0.48, availableH * 0.55, scaleFont(w, 520));
+  // Raw sizes at "ideal" scale — will be uniformly shrunk if the
+  // computed contentH exceeds availableH (landscape 16:9 and, to a
+  // lesser extent, square). Keeps proportions consistent across
+  // formats instead of clipping text into the footer.
+  const rawEmblem      = Math.min(boxW * 0.48, availableH * 0.55, scaleFont(w, 520));
+  const rawGapEmToT    = scaleFont(w, 60);
+  const rawTitle       = scaleFont(w, 96);
+  const rawGapTToB     = scaleFont(w, 40);
+  const rawBadge       = scaleFont(w, 34) + 28;
+  const rawGapBToC     = scaleFont(w, 54);
+  const rawComp        = scaleFont(w, 24);
+  const rawGapCToTop   = scaleFont(w, 30);
+  const rawTopLift     = g.best?.title ? scaleFont(w, 20) + 8 : 0;
+  const rawInnerPad    = scaleFont(w, 44);
 
-  // Pre-compute vertical space every text row takes so we can size the
-  // card to its actual content (was `boxH * 0.9` before → half-empty
-  // in portrait, cramped in landscape).
-  const gapEmblemToTitle = scaleFont(w, 60);
-  const titleSize        = scaleFont(w, 96);
-  const gapTitleToBadge  = scaleFont(w, 40);
-  const badgeSize        = scaleFont(w, 34) + 28; // font + pill padding
-  const gapBadgeToComp   = scaleFont(w, 54);
-  const compSize         = scaleFont(w, 24);
-  const gapCompToTop     = scaleFont(w, 30);
-  const topLiftSize      = g.best?.title ? scaleFont(w, 20) + 8 : 0;
-  const innerPad         = scaleFont(w, 44);
+  const rawContentH = rawInnerPad + rawEmblem + rawGapEmToT + rawTitle
+    + rawGapTToB + rawBadge + rawGapBToC + rawComp
+    + rawGapCToTop + rawTopLift + rawInnerPad;
 
-  const contentH = innerPad
-    + emblemSize
-    + gapEmblemToTitle
-    + titleSize
-    + gapTitleToBadge
-    + badgeSize
-    + gapBadgeToComp
-    + compSize
-    + gapCompToTop
-    + topLiftSize
-    + innerPad;
+  // Auto-fit: 1.0 when everything fits (portrait), <1 when it would
+  // overflow (landscape). No upscaling — a small hero on a large
+  // portrait looks premium centered, not stretched.
+  const fit = Math.min(1, availableH / rawContentH);
 
-  // Center the card vertically in the available slot; clamp so it
-  // never overflows the footer area.
-  const cardH = Math.min(contentH, availableH);
-  const cardY = top + Math.max(0, (availableH - cardH) / 2);
+  const emblemSize      = rawEmblem      * fit;
+  const gapEmblemToText = rawGapEmToT    * fit;
+  const titleSize       = rawTitle       * fit;
+  const gapTitleToBadge = rawGapTToB     * fit;
+  const badgeFontSize   = scaleFont(w, 34) * fit;
+  const gapBadgeToComp  = rawGapBToC     * fit;
+  const compSize        = rawComp        * fit;
+  const gapCompToTop    = rawGapCToTop   * fit;
+  const topLiftFontSize = scaleFont(w, 20) * fit;
+  const innerPad        = rawInnerPad    * fit;
 
-  drawCard(ctx, pad, cardY, boxW, cardH, th, 32, g.tier.color, 0.35);
+  const contentH = rawContentH * fit;
+  const cardY = top + Math.max(0, (availableH - contentH) / 2);
+
+  drawCard(ctx, pad, cardY, boxW, contentH, th, 32, g.tier.color, 0.35);
 
   const emblemY = cardY + innerPad;
   await drawRankEmblem(ctx, g.tier, cx - emblemSize / 2, emblemY, emblemSize, 0.12);
@@ -303,34 +317,107 @@ async function drawHeroCard(ctx, fmt, th, pad, top, bottom, g, extra = {}) {
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
 
-  // 1) Muscle group — the real headline (what the user is proud of).
-  //    Space Grotesk 700 has more display character than Inter at
-  //    this size, and the actual weight ships in the webfont (unlike
-  //    Inter 900 which used to be synthesised → mushy edges).
-  const groupY = emblemY + emblemSize + scaleFont(w, 68);
+  // 1) Muscle group — Space Grotesk 700, real display face (Inter 900
+  //    used to be synthesised at large sizes → mushy edges).
+  const groupY = emblemY + emblemSize + gapEmblemToText + titleSize * 0.85;
   ctx.fillStyle = th.text;
-  ctx.font = `700 ${scaleFont(w, 96)}px "Space Grotesk", Inter, system-ui, sans-serif`;
+  ctx.font = `700 ${titleSize}px "Space Grotesk", Inter, system-ui, sans-serif`;
   drawText(ctx, (LABELS_EN[g.group.key] ?? g.group.key).toUpperCase(), cx, groupY, -0.02);
 
-  // 2) Rank badge — pill-shaped, tier color as background, dark text.
-  //    Reads as a real "achievement badge" rather than a colored word.
+  // 2) Rank badge — pill with tier color as background, contrasted text.
   const badgeText = g.tier.name.toUpperCase();
-  const badgeFont = `800 ${scaleFont(w, 34)}px Inter, system-ui, sans-serif`;
-  const badgeY = groupY + scaleFont(w, 40);
+  const badgeFont = `800 ${badgeFontSize}px Inter, system-ui, sans-serif`;
+  const badgeY = groupY + gapTitleToBadge + badgeFontSize * 0.5;
   drawTierBadge(ctx, cx, badgeY, badgeText, badgeFont, g.tier.color, th);
 
-  // 3) Composite ratio — muted, tabular.
-  const compY = badgeY + scaleFont(w, 58);
+  // 3) Composite ratio.
+  const compY = badgeY + gapBadgeToComp + compSize * 0.4;
   ctx.fillStyle = th.muted;
-  ctx.font = `600 ${scaleFont(w, 24)}px Inter, system-ui, sans-serif`;
+  ctx.font = `600 ${compSize}px Inter, system-ui, sans-serif`;
   ctx.fillText(`Composite ${g.eqRatio.toFixed(2)}× bodyweight`, cx, compY);
 
-  // 4) Top lift — tiny, just the reference so people know what drove it.
+  // 4) Top lift reference.
   if (g.best?.title) {
     ctx.fillStyle = th.muted;
-    ctx.font = `500 ${scaleFont(w, 20)}px Inter, system-ui, sans-serif`;
+    ctx.font = `500 ${topLiftFontSize}px Inter, system-ui, sans-serif`;
     const line = `Top: ${g.best.title} · est. 1RM ${g.best.best1RM.toFixed(0)} kg`;
-    ctx.fillText(trimText(ctx, line, boxW - pad * 2), cx, compY + scaleFont(w, 34));
+    ctx.fillText(trimText(ctx, line, boxW - pad * 2), cx, compY + gapCompToTop + topLiftFontSize * 0.5);
+  }
+
+  // Silence extra param warning.
+  void extra;
+}
+
+/* Landscape (16:9) layout for the Hero mode: emblem on the left, text
+   stacked on the right. Avoids the "tiny emblem lost in a big empty
+   card" effect that a shrunken vertical stack produces on wide canvases. */
+async function drawHeroSideBySide(ctx, fmt, th, pad, top, bottom, g) {
+  const { w } = fmt;
+  const availableH = bottom - top;
+  const boxW = w - pad * 2;
+
+  // Card fills the whole available slot horizontally, and a
+  // comfortable ~85 % of the available height (leaves a bit of air
+  // above the footer).
+  const cardH = availableH * 0.9;
+  const cardY = top + (availableH - cardH) / 2;
+  drawCard(ctx, pad, cardY, boxW, cardH, th, 32, g.tier.color, 0.35);
+
+  const innerPad = scaleFont(w, 40);
+
+  // Emblem block on the left (~40% of card width), vertically centered.
+  const emblemMax = Math.min(cardH - innerPad * 2, boxW * 0.42);
+  const emblemSize = Math.min(emblemMax, scaleFont(w, 620));
+  const emblemX = pad + innerPad + (boxW * 0.42 - emblemSize) / 2;
+  const emblemY = cardY + (cardH - emblemSize) / 2;
+  await drawRankEmblem(ctx, g.tier, emblemX, emblemY, emblemSize, 0.14);
+
+  // Text column on the right, everything left-aligned.
+  const tx = pad + boxW * 0.44;
+  const txMax = pad + boxW - innerPad - tx;
+
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+
+  const titleSize   = scaleFont(w, 100);
+  const badgeSize   = scaleFont(w, 34);
+  const compSize    = scaleFont(w, 26);
+  const topSize     = scaleFont(w, 20);
+
+  // Stack the block vertically, centered around the card's midline.
+  const blockH = titleSize + scaleFont(w, 30) + badgeSize + 28
+                 + scaleFont(w, 44) + compSize
+                 + (g.best?.title ? scaleFont(w, 34) + topSize : 0);
+  let cy = cardY + (cardH - blockH) / 2;
+
+  // 1) Muscle group headline
+  cy += titleSize * 0.85;
+  ctx.fillStyle = th.text;
+  ctx.font = `700 ${titleSize}px "Space Grotesk", Inter, system-ui, sans-serif`;
+  drawText(ctx, (LABELS_EN[g.group.key] ?? g.group.key).toUpperCase(), tx, cy, -0.02);
+
+  // 2) Tier badge (aligned left with tx)
+  cy += scaleFont(w, 30);
+  const badgeText = g.tier.name.toUpperCase();
+  const badgeFont = `800 ${badgeSize}px Inter, system-ui, sans-serif`;
+  ctx.font = badgeFont;
+  const badgeW = ctx.measureText(badgeText).width + Math.max(28, badgeSize * 0.5) * 2;
+  const badgeH = badgeSize + 28;
+  drawTierBadge(ctx, tx + badgeW / 2, cy + badgeH / 2, badgeText, badgeFont, g.tier.color, th);
+
+  // 3) Composite
+  cy += badgeH + scaleFont(w, 44);
+  ctx.fillStyle = th.muted;
+  ctx.font = `600 ${compSize}px Inter, system-ui, sans-serif`;
+  ctx.fillText(`Composite ${g.eqRatio.toFixed(2)}× bodyweight`, tx, cy);
+
+  // 4) Top lift
+  if (g.best?.title) {
+    cy += scaleFont(w, 34);
+    ctx.fillStyle = th.muted;
+    ctx.font = `500 ${topSize}px Inter, system-ui, sans-serif`;
+    const line = `Top: ${g.best.title} · est. 1RM ${g.best.best1RM.toFixed(0)} kg`;
+    ctx.fillText(trimText(ctx, line, txMax), tx, cy);
   }
 }
 
@@ -416,13 +503,19 @@ async function drawGrid(ctx, fmt, th, pad, top, bottom, groups, best) {
   const cellW = (boxW - cellGap * (cols - 1)) / cols;
   const cellH = (boxH - cellGap * (rows - 1)) / rows;
 
+  // Cap the font-scaling reference width so that in short landscapes
+  // (small cellH but huge canvas w) fonts don't explode past the cell
+  // bottom. The 3.2 factor keeps the 3-line stack (name/tier/ratio)
+  // fitting under the emblem with breathing room.
+  const refW = Math.min(w, Math.round(cellH * 3.2));
+
   for (let i = 0; i < groups.length; i++) {
     const g = groups[i];
     const col = i % cols;
     const row = Math.floor(i / cols);
     const x = pad + col * (cellW + cellGap);
     const y = top + row * (cellH + cellGap);
-    await drawGroupCell(ctx, x, y, cellW, cellH, th, g, w, g === best);
+    await drawGroupCell(ctx, x, y, cellW, cellH, th, g, refW, g === best);
   }
 }
 
@@ -474,13 +567,18 @@ async function drawDetailedGrid(ctx, fmt, th, pad, top, bottom, groups, best) {
   const cellW = (boxW - cellGap * (cols - 1)) / cols;
   const cellH = (boxH - cellGap * (rows - 1)) / rows;
 
+  // Detail cells have 4 text rows (label + tier + comp + top-lift).
+  // Cap the font-scaling reference so those rows stay inside cellH in
+  // short landscapes.
+  const refW = Math.min(w, Math.round(cellH * 4.2));
+
   for (let i = 0; i < groups.length; i++) {
     const g = groups[i];
     const col = i % cols;
     const row = Math.floor(i / cols);
     const x = pad + col * (cellW + cellGap);
     const y = top + row * (cellH + cellGap);
-    await drawDetailCell(ctx, x, y, cellW, cellH, th, g, w, g === best);
+    await drawDetailCell(ctx, x, y, cellW, cellH, th, g, refW, g === best);
   }
 }
 

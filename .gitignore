@@ -4,3 +4,4 @@ node_modules/
 .cache/
 agent.md
 TODO.md
+test-export.html
