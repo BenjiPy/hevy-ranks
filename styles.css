@@ -260,16 +260,14 @@ input[type="number"]::-webkit-inner-spin-button {
   border: none;
   color: var(--text);
 }
+/* Header brand mark — now an inline SVG shield emblem (see favicon.svg).
+   The SVG carries its own gradient + highlight, so this rule only sets
+   the display size and a subtle drop shadow for depth on the header. */
 .brand-mark {
-  display: grid;
-  place-items: center;
   width: 34px;
   height: 34px;
-  border-radius: 10px;
-  background: var(--accent);
-  color: #0a0b0d;
-  font-weight: 800;
-  font-size: 14px;
+  display: block;
+  filter: drop-shadow(0 4px 10px rgba(122, 162, 255, 0.35));
 }
 .header-links {
   display: flex;
@@ -1427,6 +1425,296 @@ table.thresholds tbody tr:last-child td {
 .doc-cta {
   text-align: center;
   margin: 40px 0 0;
+}
+
+/* ---------- Privacy page ---------- */
+/* Trust badges displayed as a row of pills right below the intro,
+   summarising the privacy stance at a glance. */
+.privacy-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin: 26px 0 8px;
+}
+.pv-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+/* Footer button styled to blend with the surrounding <a> links so the
+   "Your data" entry sits naturally alongside "Changelog" / "GitHub".
+   `<button>` needs a full UA reset (font + line-height + vertical-
+   alignment + no letter-spacing quirk) to actually match the anchors. */
+.footer-link {
+  appearance: none;
+  -webkit-appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  vertical-align: baseline;
+  color: var(--muted);
+  cursor: pointer;
+  text-decoration: none;
+}
+.footer-link:hover {
+  color: var(--text);
+}
+.footer-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ---------- Share / PNG export modal ----------
+   Full-viewport overlay with a centered card. The preview <canvas>
+   sits in a flexible frame that reshapes to whichever format the user
+   picks (its intrinsic width/height set the aspect ratio in CSS-land).
+*/
+.no-scroll { overflow: hidden; }
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal.hidden { display: none; }
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 6, 12, 0.72);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.modal-card {
+  position: relative;
+  z-index: 1;
+  max-width: 960px;
+  width: 100%;
+  max-height: min(92vh, 900px);
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: clamp(20px, 3vw, 32px);
+  box-shadow: var(--shadow);
+}
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.modal-close:hover {
+  color: var(--text);
+  background: var(--surface-2);
+  border-color: var(--line);
+}
+.modal-card h2 {
+  margin: 0 0 4px;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+.modal-sub {
+  margin: 0 0 20px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* Two-column layout: preview on the left, options + actions on the
+   right. Collapses to a single column on narrow screens. */
+.share-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: clamp(16px, 3vw, 28px);
+  align-items: start;
+}
+@media (max-width: 720px) {
+  .share-grid { grid-template-columns: 1fr; }
+}
+
+.share-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.share-preview-frame {
+  width: 100%;
+  max-width: 420px;
+  padding: 8px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.share-preview-frame canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+  /* Show a placeholder look before the first paint completes. */
+  min-height: 200px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+}
+.share-preview-hint {
+  color: var(--muted-2);
+  font-size: 12px;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.share-options {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.share-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.share-field-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted-2);
+  font-weight: 700;
+}
+/* Segmented toggle: option pills with the current one highlighted.
+   Same visual language as .reason-tag so it feels native. */
+.share-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.share-opt {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.share-opt:hover { color: var(--text); border-color: var(--muted-2); }
+.share-opt[aria-checked="true"] {
+  color: var(--text);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.share-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  margin-top: 2px;
+}
+.share-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+.share-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+.share-actions .btn { flex: 1 1 auto; min-width: 0; }
+.share-status {
+  color: var(--muted-2);
+  font-size: 12.5px;
+  margin: 2px 0 0;
+  min-height: 1.2em;
+}
+
+/* "Share as image" CTA — deliberately louder than surrounding controls
+   so users notice the feature. Sits on its own centered row between the
+   results head and the dashboard, with a warm gradient distinct from
+   the accent-blue primary buttons. */
+.results-head { position: relative; }
+.share-cta-row {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 18px;
+}
+.btn-share {
+  --share-a: #ff8a3d;
+  --share-b: #ff4d8f;
+  /* UA reset — no .btn base class here, so we normalise ourselves
+     to avoid the native grey button chrome on Safari/iOS. */
+  -webkit-appearance: none;
+  appearance: none;
+  font-family: inherit;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 28px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--share-a), var(--share-b));
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 14px;
+  cursor: pointer;
+  box-shadow:
+    0 10px 24px -8px rgba(255, 77, 143, 0.55),
+    0 2px 0 rgba(255, 255, 255, 0.15) inset;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+.btn-share:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+  box-shadow:
+    0 14px 30px -8px rgba(255, 77, 143, 0.65),
+    0 2px 0 rgba(255, 255, 255, 0.18) inset;
+}
+.btn-share:active { transform: translateY(0); filter: brightness(0.97); }
+.btn-share:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+.btn-share span[aria-hidden] { font-size: 18px; line-height: 1; }
+@media (max-width: 640px) {
+  .btn-share { width: 100%; justify-content: center; }
+  .share-cta-row { padding: 2px 0 14px; }
 }
 
 /* ---------- Toast ---------- */

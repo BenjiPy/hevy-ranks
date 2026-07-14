@@ -9,11 +9,15 @@
       content="Turn your Hevy workouts into a strength rank per muscle group. Open-source, non-profit."
     />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <!-- Apple / legacy fallback: same SVG works as an apple-touch-icon on
+         modern iOS; Android Chrome uses it for the PWA install prompt. -->
+    <link rel="apple-touch-icon" href="favicon.svg" />
+    <meta name="theme-color" content="#7aa2ff" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
   </head>
@@ -22,12 +26,13 @@
     <canvas id="confetti" class="confetti-canvas" aria-hidden="true"></canvas>
 
     <header class="site-header">
-      <button class="brand" data-goto="landing">
-        <span class="brand-mark">HR</span>
+      <button class="brand" data-goto="landing" aria-label="Hevy Ranks — home">
+        <img class="brand-mark" src="favicon.svg" alt="" aria-hidden="true" width="34" height="34" />
         <span class="brand-name">Hevy<span class="accent">Ranks</span></span>
       </button>
       <nav class="header-links">
         <button class="navlink" data-goto="ranks">How it works</button>
+        <button class="navlink" data-goto="privacy">Your data</button>
         <a
           href="https://github.com/BenjiPy/hevy-ranks"
           target="_blank"
@@ -81,7 +86,9 @@
         <button class="back" data-goto="landing">← Back</button>
         <h2>Connect with API key</h2>
         <p class="panel-sub">
-          Your key stays in your browser and is only sent to Hevy. Generate it at
+          Your key stays in your browser and is only sent to Hevy —
+          <button type="button" class="inline-link" data-goto="privacy">see how your data is handled</button>.
+          Generate it at
           <a href="https://hevy.com/settings?developer" target="_blank" rel="noopener"
             >hevy.com/settings?developer</a
           >
@@ -132,7 +139,7 @@
         <p class="panel-sub">
           In the Hevy app: <strong>Profile → Settings → Export Data</strong>. Drop
           the <code>workouts.csv</code> file here. Everything is processed locally —
-          nothing is sent to any server.
+          <button type="button" class="inline-link" data-goto="privacy">see how your data is handled</button>.
         </p>
         <p class="panel-note">
           <strong>Tip for non-English users:</strong> Hevy's exercise catalog is
@@ -192,28 +199,48 @@
 
     <!-- ======================= RESULTS ======================= -->
     <section id="results" class="view hidden">
+      <!-- Static shell — never persisted, so UI additions (buttons,
+           section titles) stay live across cache restores. -->
       <div class="results-head">
         <button class="back" data-goto="landing">← New calculation</button>
         <div class="results-meta" id="resultsMeta"></div>
       </div>
 
-      <div id="localeNotice" class="locale-notice hidden"></div>
-
-      <div class="overview">
-        <div class="radar-wrap" id="radarWrap"></div>
-        <div class="best" id="best"></div>
+      <div class="share-cta-row">
+        <button
+          class="btn-share"
+          id="shareBtn"
+          type="button"
+          aria-haspopup="dialog"
+        >
+          <span aria-hidden="true">📤</span>
+          <span>Share with your friends</span>
+        </button>
       </div>
 
-      <div class="section-title">Rank by muscle group</div>
-      <div class="groups" id="groups"></div>
+      <!-- Only THIS wrapper is persisted to sessionStorage, so the
+           surrounding controls above/below can evolve between releases
+           without invalidating cached results. -->
+      <div id="resultsContent">
+        <div id="localeNotice" class="locale-notice hidden"></div>
 
-      <div id="unmatchedSection" class="unmatched-section hidden">
-        <div class="section-title">Exercises not counted</div>
-        <p class="unmatched-lead" id="unmatchedLead"></p>
-        <ul class="unmatched-list" id="unmatchedList"></ul>
+        <div class="overview">
+          <div class="radar-wrap" id="radarWrap"></div>
+          <div class="best" id="best"></div>
+        </div>
+
+        <div class="section-title">Rank by muscle group</div>
+        <div class="groups" id="groups"></div>
+
+        <div id="unmatchedSection" class="unmatched-section hidden">
+          <div class="section-title">Exercises not counted</div>
+          <p class="unmatched-lead" id="unmatchedLead"></p>
+          <ul class="unmatched-list" id="unmatchedList"></ul>
+        </div>
+
+        <p class="disclaimer" id="disclaimer"></p>
       </div>
 
-      <p class="disclaimer" id="disclaimer"></p>
       <div class="results-foot">
         <button class="btn btn-ghost" data-goto="ranks">How is this calculated?</button>
       </div>
@@ -370,6 +397,210 @@
       </div>
     </section>
 
+    <!-- ======================= PRIVACY ======================= -->
+    <section id="privacy" class="view hidden">
+      <div class="doc">
+        <div class="doc-head">
+          <button class="back" data-back="landing">← Back</button>
+          <h1>How your data is handled</h1>
+          <p>
+            Short version: <strong>everything stays on your device.</strong>
+            Hevy Ranks is a static web app — there is no backend, no
+            database, no analytics, no tracking. Below is the exact
+            breakdown of what happens to your data, per mode.
+          </p>
+        </div>
+
+        <div class="privacy-badges">
+          <span class="pv-badge">🖥️ Runs 100% in your browser</span>
+          <span class="pv-badge">🚫 No server, no database</span>
+          <span class="pv-badge">📊 No analytics, no cookies</span>
+          <span class="pv-badge">🔓 Open source (verifiable)</span>
+        </div>
+
+        <h2>CSV mode</h2>
+        <ul class="notes">
+          <li>
+            <b>The CSV file never leaves your device.</b> It's read directly
+            in your browser via the standard File API and parsed locally
+            by <code>src/csv.js</code>. Nothing is uploaded anywhere.
+          </li>
+          <li>
+            <b>The exercise catalog</b> (used to identify each lift) is a
+            single static JSON file shipped with the app —
+            <code>data/exercise-templates.json</code>. It's loaded once
+            from GitHub Pages, then everything runs locally.
+          </li>
+        </ul>
+
+        <h2>API-key mode</h2>
+        <ul class="notes">
+          <li>
+            <b>Your API key is used only to talk to Hevy directly</b>
+            (<code>https://api.hevyapp.com/…</code>) from your browser.
+            The request goes straight from you to Hevy — Hevy Ranks has no
+            proxy, no server, no middleman that could see it.
+          </li>
+          <li>
+            <b>The key is stored in your browser</b> (in
+            <code>localStorage</code>) <em>only if you tick "Remember me"</em>.
+            You can clear it at any time by unticking the box, clicking
+            "Disconnect", or clearing your browser storage for this site.
+          </li>
+          <li>
+            <b>Rate limits and errors</b> come from Hevy's API directly.
+            Hevy Ranks doesn't log them anywhere.
+          </li>
+        </ul>
+
+        <h2>What's stored in your browser</h2>
+        <ul class="notes">
+          <li>
+            <b><code>localStorage</code>:</b> your API key (only if
+            "Remember me" is on), your bodyweight, and your reported sex —
+            so you don't have to re-enter them each time.
+          </li>
+          <li>
+            <b><code>sessionStorage</code>:</b> a cached copy of your last
+            results HTML, so refreshing the page or clicking "How it
+            works" doesn't force a re-import. Cleared automatically when
+            you close the tab.
+          </li>
+          <li>
+            <b>No cookies.</b> The site sets zero cookies.
+          </li>
+        </ul>
+
+        <h2>Third parties</h2>
+        <ul class="notes">
+          <li>
+            <b>Hevy API</b> (only in API-key mode) — receives your API
+            requests when you fetch your workouts. Governed by
+            <a href="https://www.hevyapp.com/privacy-policy" target="_blank" rel="noopener">Hevy's own privacy policy</a>.
+          </li>
+          <li>
+            <b>GitHub Pages</b> — serves the static files (HTML, CSS, JS,
+            rank images). Your browser fetches these when you load the
+            site. GitHub may log basic request metadata (IP, user agent);
+            see
+            <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub's privacy statement</a>.
+            Hevy Ranks itself doesn't collect or forward any of this.
+          </li>
+          <li>
+            <b>Nothing else.</b> No Google Analytics, no Cloudflare
+            Insights, no Sentry, no CDN pixel, no ad network.
+          </li>
+        </ul>
+
+        <h2>How to wipe everything</h2>
+        <ol class="steps">
+          <li>
+            <div>
+              <b>In the app</b>
+              <span>Untick "Remember me" on the API panel and click
+              "Disconnect" — clears the stored API key.</span>
+            </div>
+          </li>
+          <li>
+            <div>
+              <b>In your browser</b>
+              <span>Open DevTools → Application → Storage → "Clear site
+              data" (Chrome / Edge) — wipes everything: localStorage,
+              sessionStorage and cache for this site.</span>
+            </div>
+          </li>
+        </ol>
+
+        <h2>Verify it yourself</h2>
+        <p>
+          Everything above is auditable — the whole project is open source
+          at
+          <a href="https://github.com/BenjiPy/hevy-ranks" target="_blank" rel="noopener">github.com/BenjiPy/hevy-ranks</a>.
+          The only outbound network calls you'll ever see are:
+        </p>
+        <ul class="notes">
+          <li><code>GET</code> requests to the site itself (HTML/CSS/JS/images from GitHub Pages).</li>
+          <li><code>GET data/exercise-templates.json</code> — the exercise catalog.</li>
+          <li><code>GET https://api.hevyapp.com/…</code> — <em>only when you use API-key mode</em>.</li>
+        </ul>
+        <p>
+          Open your browser's Network tab and try it — no other requests
+          are made. If you ever spot one that shouldn't be there,
+          <a href="https://github.com/BenjiPy/hevy-ranks/issues" target="_blank" rel="noopener">open an issue</a>
+          — that would be a bug.
+        </p>
+
+        <div class="doc-cta">
+          <button class="btn btn-primary" data-goto="setup-api">Calculate my ranks</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= SHARE / EXPORT MODAL ======================= -->
+    <div
+      id="shareModal"
+      class="modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="shareTitle"
+    >
+      <div class="modal-backdrop" data-close-share></div>
+      <div class="modal-card share-card" role="document">
+        <button
+          class="modal-close"
+          type="button"
+          aria-label="Close"
+          data-close-share
+        >×</button>
+        <h2 id="shareTitle">Share your ranks</h2>
+        <p class="modal-sub">
+          Generate a PNG you can share on Instagram, X, Discord or
+          anywhere else. Nothing leaves your device.
+        </p>
+
+        <div class="share-grid">
+          <div class="share-preview">
+            <div class="share-preview-frame">
+              <canvas id="sharePreview" aria-label="Preview of the exported image"></canvas>
+            </div>
+            <p class="share-preview-hint" id="sharePreviewHint">Building preview…</p>
+          </div>
+
+          <div class="share-options">
+            <div class="share-field">
+              <span class="share-field-label">Format</span>
+              <div class="share-toggle" id="shareFormat" role="radiogroup" aria-label="Image format"></div>
+            </div>
+            <div class="share-field">
+              <span class="share-field-label">Content</span>
+              <div class="share-toggle" id="shareMode" role="radiogroup" aria-label="Content mode"></div>
+            </div>
+            <div class="share-field">
+              <span class="share-field-label">Theme</span>
+              <div class="share-toggle" id="shareTheme" role="radiogroup" aria-label="Color theme"></div>
+            </div>
+            <label class="share-check">
+              <input type="checkbox" id="shareHideBw" />
+              <span>Hide my bodyweight</span>
+            </label>
+
+            <div class="share-actions">
+              <button class="btn btn-primary" id="shareDownload" type="button">
+                <span aria-hidden="true">⬇</span> Download PNG
+              </button>
+              <button class="btn btn-ghost" id="shareNative" type="button" hidden>
+                <span aria-hidden="true">📤</span> Share…
+              </button>
+              <button class="btn btn-ghost" id="shareCopy" type="button" hidden>
+                <span aria-hidden="true">📋</span> Copy image
+              </button>
+            </div>
+            <p class="share-status" id="shareStatus" aria-live="polite"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="toast" class="toast hidden"></div>
 
     <footer class="site-footer">
@@ -385,6 +616,12 @@
           target="_blank"
           rel="noopener"
         >Changelog</a>
+        <span class="dot">·</span>
+        <button
+          type="button"
+          class="footer-link"
+          data-goto="privacy"
+        >Your data</button>
         <span class="dot">·</span>
         <a
           href="https://github.com/BenjiPy/hevy-ranks"
