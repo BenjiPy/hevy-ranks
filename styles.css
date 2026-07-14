@@ -390,14 +390,26 @@ input[type="number"]::-webkit-inner-spin-button {
   border: none;
   color: var(--text);
 }
-/* Header brand mark — now an inline SVG shield emblem (see favicon.svg).
-   The SVG carries its own gradient + highlight, so this rule only sets
-   the display size and a subtle drop shadow for depth on the header. */
+/* Header brand mark — inline SVG shield emblem sitting inside a
+   subtle glass chip so the logo picks up the same frosted language as
+   the rest of the UI (thin luminous border, top highlight, gentle
+   backdrop blur behind the SVG). Padding acts as the glass pane
+   around the icon. */
 .brand-mark {
   width: 34px;
   height: 34px;
   display: block;
-  filter: drop-shadow(0 4px 10px rgba(122, 162, 255, 0.35));
+  padding: 5px;
+  box-sizing: content-box;
+  border-radius: 12px;
+  background: var(--glass-bg-soft);
+  border: var(--glass-border);
+  -webkit-backdrop-filter: var(--glass-blur-soft);
+  backdrop-filter: var(--glass-blur-soft);
+  box-shadow:
+    var(--glass-highlight),
+    0 6px 16px -8px rgba(122, 162, 255, 0.45);
+  filter: drop-shadow(0 3px 8px rgba(122, 162, 255, 0.35));
 }
 .header-links {
   display: flex;
@@ -1633,9 +1645,9 @@ table.thresholds tbody tr:last-child td {
 .modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(4, 6, 12, 0.72);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgba(4, 6, 12, 0.55);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  backdrop-filter: blur(10px) saturate(120%);
 }
 .modal-card {
   position: relative;
@@ -1644,11 +1656,13 @@ table.thresholds tbody tr:last-child td {
   width: 100%;
   max-height: min(92vh, 900px);
   overflow: auto;
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--glass-bg);
+  border: var(--glass-border-strong);
   border-radius: var(--radius-lg);
   padding: clamp(20px, 3vw, 32px);
-  box-shadow: var(--shadow);
+  -webkit-backdrop-filter: var(--glass-blur-lg);
+  backdrop-filter: var(--glass-blur-lg);
+  box-shadow: var(--glass-highlight), var(--glass-shadow-lg);
 }
 .modal-close {
   position: absolute;
@@ -1705,9 +1719,12 @@ table.thresholds tbody tr:last-child td {
   width: 100%;
   max-width: 420px;
   padding: 8px;
-  background: var(--bg-2);
-  border: 1px solid var(--line);
+  background: var(--glass-bg-soft);
+  border: var(--glass-border);
   border-radius: 14px;
+  -webkit-backdrop-filter: var(--glass-blur-soft);
+  backdrop-filter: var(--glass-blur-soft);
+  box-shadow: var(--glass-highlight);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1755,20 +1772,27 @@ table.thresholds tbody tr:last-child td {
 .share-opt {
   padding: 8px 12px;
   border-radius: 10px;
-  border: 1px solid var(--line);
-  background: var(--bg-2);
+  border: var(--glass-border);
+  background: var(--glass-bg-soft);
   color: var(--muted);
   font: inherit;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  -webkit-backdrop-filter: var(--glass-blur-soft);
+  backdrop-filter: var(--glass-blur-soft);
   transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
 }
-.share-opt:hover { color: var(--text); border-color: var(--muted-2); }
+.share-opt:hover {
+  color: var(--text);
+  background: var(--glass-bg-hover);
+  border-color: rgba(255, 255, 255, 0.18);
+}
 .share-opt[aria-checked="true"] {
   color: var(--text);
   background: var(--accent-soft);
   border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(122, 162, 255, 0.25);
 }
 .share-check {
   display: flex;
